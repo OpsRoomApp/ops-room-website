@@ -93,6 +93,54 @@ opsroom-website/
 
 ## Release Management
 
+### Publishing a New OPS ROOM Release
+
+Follow these steps on the DigitalOcean server every time a new release is built.
+
+**1. Upload the installer ZIP**
+
+```bash
+scp OPS_ROOM_v0_25_XX_Public_Windows_x64.zip user@opsroom.live:/opt/opsroom-releases/
+```
+
+**2. Generate the SHA256 checksum**
+
+```bash
+sha256sum /opt/opsroom-releases/OPS_ROOM_v0_25_XX_Public_Windows_x64.zip
+```
+
+**3. Update the manifest**
+
+Edit `/opt/opsroom-releases/update.json`:
+
+```bash
+nano /opt/opsroom-releases/update.json
+```
+
+Set `latest_version`, `version`, `download_url`, `url`, `sha256`, `message`, and
+`notes`. Keep `fallback_download_url` pointing to the GitHub mirror.
+
+**4. Update the `latest` symlink**
+
+```bash
+cd /opt/opsroom-releases
+rm -f latest
+ln -s OPS_ROOM_v0_25_XX_Public_Windows_x64.zip latest
+```
+
+**5. Verify everything is live**
+
+```bash
+# Manifest returns valid JSON with correct version
+curl -s https://opsroom.live/api/update.json | jq .latest_version
+
+# Latest download redirects to the ZIP
+curl -sI https://opsroom.live/downloads/latest | grep -E 'HTTP|content-type|content-length'
+```
+
+No website rebuild or container restart is required. nginx reads the manifest
+and symlink on every request.
+
 ### Directory Structure on the Server
 
 ```
