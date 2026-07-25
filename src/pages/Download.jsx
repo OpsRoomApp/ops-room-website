@@ -1,22 +1,44 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO.jsx';
 import { PAGE_TITLES } from '../config/seo.js';
 
-const VERSIONS = [
-  { v: 'v0.25.13', date: '2026-07-25', note: 'Update infrastructure migrated to opsroom.live. GitHub remains emergency fallback.' },
-  { v: 'v0.25.12', date: '2026-07-09', note: 'ChartFox runtime diagnostics; finance UI polish; recording schema v2.' },
-  { v: 'v0.25.11', date: '2026-06-22', note: 'Recorder v2 schema: sidestick fields appended at tail.' },
-  { v: 'v0.25.10', date: '2026-06-04', note: 'Chart rendering: ChartFox & Navigraph catalog integration.' },
-  { v: 'v0.25.9',  date: '2026-05-19', note: 'Module preloader: TTL cache for slow endpoints.' },
-  { v: 'v0.25.8',  date: '2026-05-02', note: 'Bug fix release: finance & dispatch controls.' },
-];
-
 export default function Download() {
+  const [manifest, setManifest] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch('https://opsroom.live/api/update.json')
+      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
+      .then((data) => {
+        setManifest(data);
+        // Analytics are only recorded on actual download click, not page views.
+      })
+      .catch(() => setError('Could not fetch release information. The update server may be unreachable.'));
+  }, []);
+
+  const version = manifest?.latest_version || manifest?.version || '';
+  const downloadUrl = manifest?.download_url || manifest?.url || '';
+  const codename = manifest?.codename || '';
+  const channel = manifest?.channel || 'stable';
+  const sha256 = manifest?.sha256 || '';
+  const notes = manifest?.notes || '';
+
+  const handleDownload = () => {
+    if (downloadUrl) {
+      fetch('https://admin.opsroom.live/api/analytics/record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version }),
+      }).catch(() => {});
+    }
+  };
+
   return (
     <>
       <SEO
         title={PAGE_TITLES.download}
-        description="Download the latest version of OPS ROOM for Windows. Includes installer, portable build, and full version history."
+        description="Download the latest version of OPS ROOM for Windows. Single-click installer with automatic updates."
         path="/download"
       />
 
@@ -24,48 +46,78 @@ export default function Download() {
         <div className="container">
           <div className="section-head">
             <span className="section-eyebrow">/ DOWNLOADS</span>
-            <h1 className="section-title">OPS ROOM v0.25.13: Windows.</h1>
+            <h1 className="section-title">
+              {manifest ? `OPS ROOM v${version}: Windows.` : 'OPS ROOM: Windows.'}
+            </h1>
             <p className="section-subtitle">
               Stable public release. Installer is recommended; portable build is provided for
-              users without admin rights.
+              users without admin rights. Every release is SHA256-verified before installation.
             </p>
           </div>
 
+          {error && (
+            <div className="panel" style={{ borderColor: 'rgba(255,23,68,0.3)', marginBottom: '1.5rem' }}>
+              <div className="panel-body">
+                <p style={{ color: 'var(--red)', fontSize: '0.85rem', margin: 0 }}>{error}</p>
+              </div>
+            </div>
+          )}
+
           <div className="dl-grid">
             <div className="dl-main">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem', flexWrap: 'wrap' }}>
-                <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem', letterSpacing: '0.05em', color: 'var(--acc)' }}>OPS ROOM v0.25.13</h2>
-                <span className="tag"><span className="tag-dot" /> STABLE</span>
-              </div>
-              <p className="muted" style={{ marginTop: '0.5rem' }}>
-                Updated 2026-07-25 - Windows 10/11 - x64
-              </p>
-              <div className="dl-actions">
-                <a className="btn btn-primary" href="https://opsroom.live/downloads/latest" rel="noopener noreferrer">
-                  Download Installer
-                </a>
-                <a className="btn btn-ghost" href="https://opsroom.live/downloads/OPS_ROOM_v0_25_13_Public_Windows_x64.zip" rel="noopener noreferrer">
-                  Portable (.zip)
-                </a>
-                <Link className="btn btn-ghost" to="/changelog">
-                  Release Notes
-                </Link>
-              </div>
-              <div className="dl-meta-line">
-                <span>BUILD <strong>v0.25.13</strong></span>
-                <span>SIZE <strong>184 MB</strong></span>
-                <span>SHA256 <strong>verified at build</strong></span>
-                <span>PYTHON <strong>3.11.9</strong></span>
-              </div>
+              {manifest ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem', flexWrap: 'wrap' }}>
+                    <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem', letterSpacing: '0.05em', color: 'var(--acc)' }}>
+                      OPS ROOM v{version}
+                    </h2>
+                    <span className="tag">
+                      <span className="tag-dot" /> {channel.toUpperCase()}
+                    </span>
+                  </div>
+                  {codename && (
+                    <p className="muted" style={{ marginTop: '0.25rem' }}>
+                      Codename: {codename}
+                    </p>
+                  )}
 
-              <table className="spec-table" style={{ marginTop: '1rem' }}>
-                <tbody>
-                  <tr><th>Recommended</th><td className="spec-v">Windows 11 - 8 GB RAM - SSD</td></tr>
-                  <tr><th>Minimum</th><td className="spec-v">Windows 10 (1909+) - 4 GB RAM</td></tr>
-                  <tr><th>Sim</th><td className="spec-v">Microsoft Flight Simulator 2020 / 2024</td></tr>
-                  <tr><th>Privileges</th><td className="spec-v">Standard user: no admin required for portable</td></tr>
-                </tbody>
-              </table>
+                  <div className="dl-actions" style={{ marginTop: '1rem' }}>
+                    <a
+                      className="btn btn-primary"
+                      href={downloadUrl}
+                      rel="noopener noreferrer"
+                      onClick={handleDownload}
+                      style={{ fontSize: '1.05rem', padding: '0.75rem 2rem' }}
+                    >
+                      Download OPS ROOM
+                    </a>
+                    <Link className="btn btn-ghost" to="/changelog">
+                      View Changelog
+                    </Link>
+                  </div>
+
+                  <div className="dl-meta-line" style={{ marginTop: '1rem' }}>
+                    <span>VERSION <strong>v{version}</strong></span>
+                    {sha256 && (
+                      <span>SHA256 <strong className="mono">{sha256.slice(0, 16)}...</strong></span>
+                    )}
+                    <span>CHANNEL <strong>{channel}</strong></span>
+                  </div>
+
+                  {notes && (
+                    <div className="panel" style={{ marginTop: '1rem' }}>
+                      <div className="panel-head"><span className="panel-title">RELEASE NOTES</span></div>
+                      <div className="panel-body">
+                        <p className="muted" style={{ whiteSpace: 'pre-wrap' }}>{notes}</p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : !error ? (
+                <div style={{ color: 'var(--text-dim)', padding: '2rem 0', textAlign: 'center' }}>
+                  Loading release information...
+                </div>
+              ) : null}
             </div>
 
             <div className="dl-side">
@@ -74,7 +126,7 @@ export default function Download() {
                 <div className="panel-body">
                   <p className="muted">
                     Every release is SHA256-verified against the manifest at{' '}
-                    <code>api/update.json</code>. The updater validates checksums before
+                    <code>opsroom.live/api/update.json</code>. The updater validates checksums before
                     installing.
                   </p>
                 </div>
@@ -100,20 +152,6 @@ export default function Download() {
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="section-head" style={{ marginTop: '2.5rem' }}>
-            <span className="section-eyebrow">/ VERSION HISTORY</span>
-            <h2 className="section-title">Recent releases.</h2>
-          </div>
-          <div className="version-list">
-            {VERSIONS.map((v) => (
-              <div key={v.v} className="version-row">
-                <span className="vtag">{v.v}</span>
-                <span className="vnote">{v.note}</span>
-                <span className="vdate">{v.date}</span>
-              </div>
-            ))}
           </div>
         </div>
       </section>

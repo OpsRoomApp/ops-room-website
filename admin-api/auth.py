@@ -1,8 +1,8 @@
-"""OPS ROOM Admin API — GitHub OAuth authentication.
+"""OPS ROOM Admin API -- GitHub OAuth authentication with rate limiting.
 
 Uses GitHub OAuth with JWT sessions stored in httpOnly secure cookies.
 Only approved GitHub usernames (from APPROVED_GITHUB_USERS env var) are allowed.
-All login attempts are audit-logged.
+All login attempts are audit-logged to an append-only log.
 """
 
 from __future__ import annotations
@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import logging
 import secrets
+import time
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -26,6 +28,7 @@ from config import (
     JWT_EXPIRY_HOURS,
     JWT_SECRET,
     LOG_FILE,
+    RATE_LIMIT_LOGIN_PER_MIN,
 )
 
 _log = logging.getLogger(__name__)
@@ -41,9 +44,24 @@ COOKIE_KWARGS: dict[str, Any] = {
     "max_age": JWT_EXPIRY_HOURS * 3600,
 }
 
+# Simple in-memory rate limiter for login attempts.
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+
+
+def _rate_limit(key: str, max_per_min: int) -> bool:
+    """Return True if the request is within the rate limit."""
+    now = time.time()
+    window = now - 60
+    attempts = [t for t in _login_attempts[key] if t > window]
+    _login_attempts[key] = attempts
+    if len(attempts) >= max_per_min:
+        return False
+    _login_attempts[key].append(now)
+    return True
+
 
 def _audit_log(entry: dict[str, Any]) -> None:
-    """Write a structured audit log entry to the admin log file."""
+    """Write a structured audit log entry to the admin log file (append-only)."""
     entry.setdefault("time", datetime.now(timezone.utc).isoformat())
     entry.setdefault("version", "")
     entry.setdefault("filename", "")
@@ -103,12 +121,19 @@ def _make_state() -> str:
 
 
 @router.get("/login")
-async def login():
+async def login(request: Request):
     """Redirect the user to GitHub for authorisation.
 
     Stores a CSRF state token in a short-lived cookie so the callback can
     verify the request was initiated by the same browser session.
     """
+    # Rate limit
+    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    ip = ip.split(",")[0].strip()
+    if not _rate_limit(f"login:{ip}", RATE_LIMIT_LOGIN_PER_MIN):
+        _log.warning("Rate limit hit for login from %s", ip[:20])
+        raise HTTPException(status_code=429, detail="Too many login attempts. Please wait a minute and try again.")
+
     if not GITHUB_CLIENT_ID:
         raise HTTPException(status_code=500, detail="GitHub OAuth not configured")
 
@@ -129,7 +154,7 @@ async def login():
         secure=True,
         samesite="lax",
         path="/api/auth",
-        max_age=600,  # 10 minutes
+        max_age=600,
     )
     return response
 
@@ -143,26 +168,31 @@ async def callback(request: Request, code: str = "", state: str = ""):
     # Validate the OAuth state parameter to prevent CSRF.
     stored_state = request.cookies.get(STATE_COOKIE)
     if not stored_state or not secrets.compare_digest(stored_state, state):
-        _log.warning("OAuth state mismatch or missing - possible CSRF attempt")
+        _log.warning("OAuth state mismatch or missing -- possible CSRF attempt")
         raise HTTPException(status_code=400, detail="Invalid state parameter. Please try logging in again.")
 
     if not GITHUB_CLIENT_SECRET:
         raise HTTPException(status_code=500, detail="GitHub OAuth not configured")
 
     # Exchange code for access token
-    async with httpx.AsyncClient() as client:
-        token_resp = await client.post(
-            "https://github.com/login/oauth/access_token",
-            json={
-                "client_id": GITHUB_CLIENT_ID,
-                "client_secret": GITHUB_CLIENT_SECRET,
-                "code": code,
-                "redirect_uri": GITHUB_REDIRECT_URI,
-            },
-            headers={"Accept": "application/json"},
-            timeout=15,
-        )
-        token_data = token_resp.json()
+    try:
+        async with httpx.AsyncClient() as client:
+            token_resp = await client.post(
+                "https://github.com/login/oauth/access_token",
+                json={
+                    "client_id": GITHUB_CLIENT_ID,
+                    "client_secret": GITHUB_CLIENT_SECRET,
+                    "code": code,
+                    "redirect_uri": GITHUB_REDIRECT_URI,
+                },
+                headers={"Accept": "application/json"},
+                timeout=15,
+            )
+            token_data = token_resp.json()
+    except Exception as exc:
+        _log.error("GitHub token exchange network error: %s", exc)
+        _audit_log({"action": "LOGIN_FAILED", "reason": "network_error", "detail": str(exc)[:200]})
+        raise HTTPException(status_code=502, detail="GitHub authentication service unavailable")
 
     access_token = token_data.get("access_token")
     if not access_token:
@@ -171,16 +201,21 @@ async def callback(request: Request, code: str = "", state: str = ""):
         raise HTTPException(status_code=401, detail="GitHub authentication failed")
 
     # Fetch user info
-    async with httpx.AsyncClient() as client:
-        user_resp = await client.get(
-            "https://api.github.com/user",
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "Accept": "application/json",
-            },
-            timeout=15,
-        )
-        user_data = user_resp.json()
+    try:
+        async with httpx.AsyncClient() as client:
+            user_resp = await client.get(
+                "https://api.github.com/user",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/json",
+                },
+                timeout=15,
+            )
+            user_data = user_resp.json()
+    except Exception as exc:
+        _log.error("GitHub user fetch error: %s", exc)
+        _audit_log({"action": "LOGIN_FAILED", "reason": "user_fetch_failed", "detail": str(exc)[:200]})
+        raise HTTPException(status_code=502, detail="GitHub API unavailable")
 
     github_username = str(user_data.get("login") or "").lower()
     if github_username not in APPROVED_USERS:
@@ -196,7 +231,6 @@ async def callback(request: Request, code: str = "", state: str = ""):
 
     response = RedirectResponse("/", status_code=302)
     response.set_cookie(SESSION_COOKIE, jwt_token, **COOKIE_KWARGS)
-    # Clear the one-time state cookie.
     response.delete_cookie(STATE_COOKIE, path="/api/auth")
     return response
 

@@ -349,3 +349,48 @@ a:hover { color: var(--acc-dim); }
   margin-bottom: 0.75rem;
   margin-top: 1.5rem;
 }
+
+/* ---- Loading & empty states ---- */
+.loading-state {
+  color: var(--text-dim);
+  padding: 2rem 1.5rem;
+  font-size: 0.85rem;
+}
+
+.empty-state {
+  color: var(--text-dim);
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+/* ---- Utility classes ---- */
+.dim { color: var(--text-dim); }
+.mono-dim { font-family: var(--font-mono); color: var(--text-dim); }
+
+/* ---- Details/summary ---- */
+.card summary {
+  list-style: none;
+  user-select: none;
+}
+
+.card summary::-webkit-details-marker {
+  display: none;
+}
+
+/* ---- Responsive tables ---- */
+@media (max-width: 768px) {
+  .data-table {
+    font-size: 0.7rem;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 0.4rem 0.5rem;
+  }
+  .admin-main {
+    padding: 1rem;
+  }
+  .btn {
+    font-size: 0.75rem;
+  }
+}

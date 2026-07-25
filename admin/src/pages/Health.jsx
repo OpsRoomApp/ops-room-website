@@ -1,22 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 const API = '/api/health';
 
 export default function Health() {
   const [data, setData] = useState(null);
+  const [diag, setDiag] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('health');
 
-  const check = () => {
+  const check = useCallback(() => {
     setLoading(true);
-    fetch(API, { credentials: 'include' })
-      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
-      .then((d) => { setData(d); setError(''); })
+    Promise.all([
+      fetch(API, { credentials: 'include' }).then((r) => (r.ok ? r.json() : Promise.reject(r))),
+      tab === 'diag' ? fetch(`${API}/diagnostics`, { credentials: 'include' }).then((r) => (r.ok ? r.json() : Promise.reject(r))) : Promise.resolve(null),
+    ])
+      .then(([d, di]) => { setData(d); setDiag(di); setError(''); })
       .catch(() => setError('Health check failed'))
       .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { check(); }, []);
+  }, [tab]);
 
   const badge = (status) =>
     status === 'PASS'
@@ -27,16 +29,24 @@ export default function Health() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1 className="page-title" style={{ marginBottom: 0 }}>/ SYSTEM HEALTH</h1>
-        <button className="btn btn-sm" onClick={check} disabled={loading}>
-          {loading ? 'Checking...' : 'Refresh'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            {['health', 'diag'].map((t) => (
+              <button key={t} className={`btn btn-sm ${tab === t ? 'btn-primary' : ''}`} onClick={() => setTab(t)}>
+                {t === 'health' ? 'Health' : 'Diagnostics'}
+              </button>
+            ))}
+          </div>
+          <button className="btn btn-sm" onClick={check} disabled={loading}>
+            {loading ? 'Checking...' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       {error && <div className="mb-1"><span className="badge badge-err">ERROR</span> {error}</div>}
 
-      {data && (
+      {tab === 'health' && data && (
         <>
-          {/* Overall status */}
           <div className="card mb-2">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="card-head" style={{ marginBottom: 0 }}>OVERALL</div>
@@ -45,11 +55,10 @@ export default function Health() {
               </div>
             </div>
             <div className="stat-label" style={{ marginTop: '0.25rem' }}>
-              {data.passed}/{data.total} checks passed{data.failed > 0 ? ` · ${data.failed} failed` : ''}
+              {data.passed}/{data.total} checks passed{data.failed > 0 ? ` / ${data.failed} failed` : ''}
             </div>
           </div>
 
-          {/* Individual checks */}
           <table className="data-table">
             <thead>
               <tr><th>Check</th><th>Status</th><th>Detail</th></tr>
@@ -57,20 +66,58 @@ export default function Health() {
             <tbody>
               {data.checks.map((c, i) => (
                 <tr key={i}>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{c.name}</td>
+                  <td className="mono-dim" style={{ fontSize: '0.75rem' }}>{c.name}</td>
                   <td>{badge(c.status)}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                  <td className="mono-dim" style={{ fontSize: '0.7rem' }}>
                     {c.detail && typeof c.detail === 'object'
                       ? Object.entries(c.detail)
                           .filter(([, v]) => v !== null && v !== undefined && String(v) !== '')
                           .map(([k, v]) => `${k}=${v}`)
-                          .join(' · ')
+                          .join(' / ')
                       : ''}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </>
+      )}
+
+      {tab === 'diag' && diag && (
+        <>
+          <div className="grid-2 mb-2">
+            <div className="card">
+              <div className="card-head">PRODUCTION MANIFEST</div>
+              <pre className="manifest-preview">{JSON.stringify(diag.production_manifest, null, 2)}</pre>
+            </div>
+            <div className="card">
+              <div className="card-head">LIVE FETCH ({diag.live_manifest_fetch?.status})</div>
+              <pre className="manifest-preview">{JSON.stringify(diag.live_manifest_fetch?.data, null, 2)}</pre>
+            </div>
+          </div>
+
+          <div className="grid-2 mb-2">
+            <div className="card">
+              <div className="card-head">RELEASES DIRECTORY</div>
+              <div className="stat-value" style={{ fontSize: '0.9rem' }}>{diag.releases_directory?.zip_count} ZIPs</div>
+              <div className="mono-dim mt-1" style={{ fontSize: '0.7rem', maxHeight: '150px', overflow: 'auto' }}>
+                {diag.releases_directory?.zips?.map((z) => <div key={z}>{z}</div>)}
+              </div>
+            </div>
+            <div className="card">
+              <div className="card-head">TESTING MANIFEST</div>
+              <pre className="manifest-preview">{JSON.stringify(diag.testing_manifest, null, 2)}</pre>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-head">SYMLINK / DISK</div>
+            <div className="mono-dim" style={{ fontSize: '0.8rem' }}>
+              latest_symlink_target = {diag.latest_symlink_target || '(none)'}<br />
+              releases_dir = {diag.releases_directory?.path}<br />
+              exists = {String(diag.releases_directory?.exists)}
+            </div>
+          </div>
         </>
       )}
     </div>
