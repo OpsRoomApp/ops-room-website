@@ -7,19 +7,13 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-
       - "443:443"
     environment:
       - VITE_PAYMENT_ENABLED=false
-    # Optional: mount environment variables for runtime injection
-    # env_file:
-    #   - .env
-
-
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /opt/opsroom/certbot:/opt/opsroom/certbot
-
+      - /opt/opsroom-releases:/opt/opsroom-releases:ro
     networks:
       - opsroom-net
 

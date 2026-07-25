@@ -1,0 +1,15 @@
+{
+  "latest_version": "0.25.13",
+  "version": "0.25.13",
+  "codename": "Release Migration",
+  "channel": "stable",
+  "minimum_supported_version": "0.22.0",
+  "mandatory": false,
+  "release_notes_url": "https://opsroom.live/changelog",
+  "download_url": "https://opsroom.live/downloads/OPS_ROOM_v0_25_13_Public_Windows_x64.zip",
+  "url": "https://opsroom.live/downloads/OPS_ROOM_v0_25_13_Public_Windows_x64.zip",
+  "fallback_download_url": "https://github.com/OpsRoomApp/ops-room-releases/releases/download/v0.25.13/OPS_ROOM_v0_25_13_Public_Windows_x64.zip",
+  "sha256": "TO_BE_FILLED_AFTER_BUILD",
+  "message": "OPS ROOM v0.25.13 is available.",
+  "notes": "OPS ROOM v0.25.13 migrates updates to opsroom.live. GitHub remains the emergency fallback."
+}
