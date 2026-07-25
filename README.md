@@ -1,3 +1,4 @@
+
 # OPS ROOM Website
 
 Public website for OPS ROOM, a professional operations platform for Microsoft Flight Simulator.
@@ -91,3 +92,4 @@ Payment functionality is disabled by default via `VITE_PAYMENT_ENABLED=false`. T
 
 - Replace `public/og-image.png` with a real 1200x630 OpenGraph image before launching publicly.
 - Update `index.html` OpenGraph URLs if the domain changes.
+# ops-room-website
