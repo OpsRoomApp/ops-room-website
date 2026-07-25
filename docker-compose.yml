@@ -1,0 +1,20 @@
+services:
+  opsroom-website:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opsroom-website
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      - VITE_PAYMENT_ENABLED=false
+    # Optional: mount environment variables for runtime injection
+    # env_file:
+    #   - .env
+    networks:
+      - opsroom-net
+
+networks:
+  opsroom-net:
+    driver: bridge
