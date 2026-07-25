@@ -241,3 +241,90 @@ Payment functionality is disabled by default via `VITE_PAYMENT_ENABLED=false`. T
 - Keep the `update.json` SHA256 updated after every build; the OPS ROOM updater will reject mismatched checksums.
 - The `public/update.json` in this repository is a template; the live manifest lives at `/opt/opsroom-releases/update.json` on the server.
 - Update `index.html` OpenGraph URLs if the domain changes.
+
+## Admin Panel
+
+A private release administration panel is available at:
+
+```
+https://admin.opsroom.live
+```
+
+### Architecture
+
+- **Frontend**: React + Vite SPA (`admin/` directory)
+- **Backend**: FastAPI (`admin-api/` directory)
+- **Auth**: GitHub OAuth with JWT sessions in httpOnly secure cookies
+- **Access**: Only GitHub usernames listed in `APPROVED_GITHUB_USERS` are permitted
+
+### Setup
+
+**1. Create a GitHub OAuth App**
+
+Go to https://github.com/settings/developers and create a new OAuth App:
+
+- Application name: OPS ROOM Admin
+- Homepage URL: `https://admin.opsroom.live`
+- Callback URL: `https://admin.opsroom.live/api/auth/callback`
+
+Copy the Client ID and Client Secret.
+
+**2. Extend SSL certificate**
+
+Extend the existing LetsEncrypt cert to include the admin subdomain:
+
+```bash
+certbot --nginx -d opsroom.live -d www.opsroom.live -d admin.opsroom.live
+```
+
+Or use a wildcard cert covering `*.opsroom.live`.
+
+**3. Configure environment variables**
+
+In `.env`:
+
+```bash
+GITHUB_CLIENT_ID=your_client_id
+GITHUB_CLIENT_SECRET=your_client_secret
+GITHUB_REDIRECT_URI=https://admin.opsroom.live/api/auth/callback
+APPROVED_GITHUB_USERS=your_github_username
+JWT_SECRET=$(python -c "import secrets; print(secrets.token_urlsafe(64))")
+```
+
+**4. Deploy**
+
+```bash
+docker compose up -d --build
+```
+
+The admin panel is now accessible at `https://admin.opsroom.live`.
+
+### Admin Features
+
+- **Dashboard**: current stable version, channel, ZIP count, symlink status, manifest preview
+- **Upload**: drag-and-drop release ZIP upload with automatic SHA256 computation, manifest update, and symlink creation
+- **Releases**: view and edit the update manifest (channel, mandatory flag, notes, codename); rollback to any ZIP on disk
+- **Health**: check availability and response time of `/api/update.json` and `/downloads/latest`
+
+### Security
+
+- All admin API endpoints require a valid JWT from GitHub OAuth.
+- Only GitHub usernames in `APPROVED_GITHUB_USERS` are authorised.
+- JWT tokens are stored in httpOnly secure cookies (inaccessible to JavaScript).
+- The admin-api service is only exposed on `127.0.0.1:8000`; all traffic goes through nginx with HTTPS.
+- Admin actions are logged to `/var/log/opsroom-admin.log` inside the container (persisted via a named Docker volume).
+- Upload size is limited (default 500 MB).
+- Filenames are validated against a strict pattern to prevent path traversal.
+
+### Troubleshooting
+
+**"Not authenticated" on the admin panel:**
+- Verify the JWT secret is set and consistent.
+- Check that your GitHub username is in `APPROVED_GITHUB_USERS`.
+
+**Upload fails with "Invalid filename":**
+- The filename must match: `OPS_ROOM_vX_XX_XX_Public_Windows_x64.zip`
+
+**Health check shows DEGRADED:**
+- Verify nginx is running and the releases directory is populated.
+- Check `docker compose logs admin-api` for errors.

@@ -1,24 +1,27 @@
-# Stage 1: Build the React + Vite application
-FROM node:20-alpine AS builder
+# Stage 1: Build the public website
+FROM node:20-alpine AS website-builder
 
 WORKDIR /app
-
-# Install dependencies
 COPY package.json package-lock.json ./
 RUN npm ci
-
-# Copy source and build
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve with nginx
+# Stage 2: Build the admin frontend
+FROM node:20-alpine AS admin-builder
+
+WORKDIR /admin
+COPY admin/package.json admin/package-lock.json ./
+RUN npm ci
+COPY admin/ .
+RUN npm run build
+
+# Stage 3: Serve both with nginx
 FROM nginx:alpine
 
-# Copy custom nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Copy built assets from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=website-builder /app/dist /usr/share/nginx/html
+COPY --from=admin-builder /admin/dist /usr/share/nginx/html/admin
 
 EXPOSE 80
 

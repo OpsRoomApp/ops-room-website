@@ -16,7 +16,43 @@ services:
       - /opt/opsroom-releases:/opt/opsroom-releases:ro
     networks:
       - opsroom-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  admin-api:
+    build:
+      context: ./admin-api
+      dockerfile: Dockerfile
+    container_name: opsroom-admin-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GITHUB_REDIRECT_URI=${GITHUB_REDIRECT_URI:-https://admin.opsroom.live/api/auth/callback}
+      - APPROVED_GITHUB_USERS=${APPROVED_GITHUB_USERS:-}
+      - JWT_SECRET=${JWT_SECRET:-}
+      - OPSROOM_RELEASES_DIR=/opt/opsroom-releases
+    volumes:
+      - /opt/opsroom-releases:/opt/opsroom-releases
+      - admin-logs:/var/log
+    networks:
+      - opsroom-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/ping')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
 networks:
   opsroom-net:
     driver: bridge
+
+volumes:
+  admin-logs:
