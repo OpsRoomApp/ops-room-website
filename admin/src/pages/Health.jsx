@@ -8,6 +8,7 @@ export default function Health() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('health');
+  const [testStatus, setTestStatus] = useState('');
 
   const check = useCallback(() => {
     setLoading(true);
@@ -24,6 +25,17 @@ export default function Health() {
     status === 'PASS'
       ? <span className="badge badge-ok">PASS</span>
       : <span className="badge badge-err">FAIL</span>;
+
+  const runNotificationTest = async () => {
+    setTestStatus('Testing...');
+    try {
+      const resp = await fetch(`${API}/test-notify`, { method: 'POST', credentials: 'include' });
+      const body = await resp.json();
+      setTestStatus(body.ok ? 'Test sent. Check your notification channel.' : (body.detail || 'Test failed'));
+    } catch {
+      setTestStatus('Network error during test');
+    }
+  };
 
   return (
     <div>
@@ -56,6 +68,23 @@ export default function Health() {
             </div>
             <div className="stat-label" style={{ marginTop: '0.25rem' }}>
               {data.passed}/{data.total} checks passed{data.failed > 0 ? ` / ${data.failed} failed` : ''}
+            </div>
+          </div>
+
+          <div className="card mb-2" style={{ borderColor: 'rgba(0,188,212,0.2)', background: 'rgba(0,188,212,0.02)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div className="card-head" style={{ marginBottom: '0.25rem' }}>NOTIFICATION TEST</div>
+                <span className="mono-dim" style={{ fontSize: '0.7rem' }}>
+                  Verify that alerting and webhook delivery is functional.
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {testStatus && <span className="mono-dim" style={{ fontSize: '0.7rem' }}>{testStatus}</span>}
+                <button className="btn btn-sm" onClick={runNotificationTest}>
+                  Send Test Alert
+                </button>
+              </div>
             </div>
           </div>
 

@@ -34,6 +34,7 @@ export default function Layout() {
           <NavLink to="/upload">Upload</NavLink>
           <NavLink to="/releases">Releases</NavLink>
           <NavLink to="/health">Health</NavLink>
+          <NavLink to="/audit">Audit</NavLink>
           <NavLink to="/support">Support</NavLink>
         </nav>
         <div className="admin-user">

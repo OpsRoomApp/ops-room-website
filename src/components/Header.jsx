@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { to: '/download', label: 'Downloads' },
   { to: '/changelog', label: 'Changelog' },
   { to: '/support', label: 'Support' },
+  { to: 'https://discord.gg/Dv6fNAjhAt', label: 'Discord', external: true },
 ];
 
 const MOBILE_NAVBAR_BREAKPOINT = 860;
@@ -83,17 +84,23 @@ export default function Header() {
           <span className="menu-bar" /><span className="menu-bar" /><span className="menu-bar" />
         </button>
         <nav id="primary-nav" className={`sys-nav-links ${open ? 'open' : ''}`}>
-          {NAV_LINKS.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.to === '/'}
-              className={({ isActive }) => (isActive ? 'sys-nav-link active' : 'sys-nav-link')}
-              onClick={() => setOpen(false)}
-            >
-              {l.label}
-            </NavLink>
-          ))}
+          {NAV_LINKS.map((l) =>
+            l.external ? (
+              <a key={l.to} href={l.to} className="sys-nav-link" target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
+                {l.label}
+              </a>
+            ) : (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                end={l.to === '/'}
+                className={({ isActive }) => (isActive ? 'sys-nav-link active' : 'sys-nav-link')}
+                onClick={() => setOpen(false)}
+              >
+                {l.label}
+              </NavLink>
+            )
+          )}
         </nav>
       </div>
     </header>

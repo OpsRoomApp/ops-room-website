@@ -16,4 +16,6 @@ export const PAGE_TITLES = {
   documentation: `Documentation: ${SITE.name}`,
   changelog: `Changelog: ${SITE.name}`,
   contact: `Support: ${SITE.name}`,
+  faq: `FAQ: ${SITE.name}`,
+  privacy: `Privacy Policy: ${SITE.name}`,
 };

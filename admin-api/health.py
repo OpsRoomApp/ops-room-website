@@ -194,3 +194,15 @@ async def update_preview():
     except Exception:
         pass
     return manifest
+
+
+@router.post("/test-notify")
+async def test_notify(_session: dict = Depends(verify_session)):
+    """Send a test notification to verify alerting is functional.
+
+    Logs the test and returns success. Integrate with external webhook or
+    email provider by extending this handler.
+    """
+    _log.info("Notification test triggered by %s", _session.get("username", "unknown"))
+    # Future: POST to configured webhook URL or email provider here.
+    return {"ok": True, "detail": "Test notification logged. Configure a webhook or email provider to receive alerts."}

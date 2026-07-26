@@ -14,13 +14,16 @@ function StatCard({ label, value, sub, badge, accent }) {
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [error, setError] = useState('');
   const [publishing, setPublishing] = useState(false);
 
   const load = () => {
-    fetch(API, { credentials: 'include' })
-      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
-      .then(setData)
+    Promise.all([
+      fetch(API, { credentials: 'include' }).then((r) => (r.ok ? r.json() : Promise.reject(r))),
+      fetch('/api/analytics/counts', { credentials: 'include' }).then((r) => (r.ok ? r.json() : Promise.reject(r))),
+    ])
+      .then(([d, a]) => { setData(d); setAnalytics(a); })
       .catch(() => setError('Failed to load release data'));
   };
 
@@ -156,6 +159,35 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      {/* Download Analytics */}
+      {analytics && (
+        <div className="card mb-2">
+          <div className="card-head">DOWNLOAD ANALYTICS</div>
+          <div className="stat-value" style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>
+            {analytics.total_downloads || 0} total downloads
+          </div>
+          {analytics.by_version && analytics.by_version.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {analytics.by_version.slice(0, 10).map((v) => {
+                const maxDl = analytics.by_version[0]?.downloads || 1;
+                const barPct = Math.max(2, (v.downloads / maxDl) * 100);
+                return (
+                  <div key={v.version} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.75rem' }}>
+                    <span className="mono-dim" style={{ width: '80px', textAlign: 'right', flexShrink: 0 }}>v{v.version}</span>
+                    <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: '2px', height: '14px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${barPct}%`, background: 'var(--acc)', borderRadius: '2px', minWidth: '2px', transition: 'width 300ms' }} />
+                    </div>
+                    <span className="dim" style={{ width: '40px', flexShrink: 0 }}>{v.downloads}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="dim" style={{ fontSize: '0.8rem' }}>No download data yet. Downloads are recorded when users click the Download button on opsroom.live.</div>
+          )}
+        </div>
+      )}
 
       {/* Manifest preview */}
       <details className="card">

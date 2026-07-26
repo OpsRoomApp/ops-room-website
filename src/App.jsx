@@ -7,6 +7,9 @@ import Download from './pages/Download.jsx';
 import Documentation from './pages/Documentation.jsx';
 import Changelog from './pages/Changelog.jsx';
 import Support from './pages/Contact.jsx';
+import FAQ from './pages/FAQ.jsx';
+import Privacy from './pages/Privacy.jsx';
+import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
   return (
@@ -21,6 +24,9 @@ export default function App() {
           <Route path="changelog" element={<Changelog />} />
           <Route path="/contact" element={<Support />} />
           <Route path="support" element={<Support />} />
+          <Route path="faq" element={<FAQ />} />
+          <Route path="privacy" element={<Privacy />} />
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </BrowserRouter>
