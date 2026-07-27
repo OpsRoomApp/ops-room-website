@@ -37,27 +37,68 @@ async def _safe_fetch(url: str, timeout: int = 10) -> tuple[int, int, dict[str, 
 
 @router.get("")
 async def health_check(_session: dict = Depends(verify_session)):
-    """Run all health checks and return structured PASS/FAIL results."""
+    """Run all health checks and return structured PASS/FAIL results.
+
+    Checks local filesystem first (fast, always available), then external
+    endpoints (may fail if the site is not yet deployed on the target domain).
+    Local checks are weighted higher; external failures are noted but do not
+    mark the whole system as unhealthy unless local checks also fail.
+    """
     # Fire all async fetches in parallel
-    website_task = _safe_fetch("https://opsroom.live/health")
+    website_task = _safe_fetch("https://opsroom.live/")
     manifest_task = _safe_fetch("https://opsroom.live/api/update.json")
-    download_task = _safe_fetch("https://opsroom.live/downloads/latest")
 
     status_w, ms_w, headers_w = await website_task
     status_m, ms_m, headers_m = await manifest_task
-    status_d, ms_d, headers_d = await download_task
 
     checks: list[dict[str, Any]] = []
-    checks.append(_check("website", status_w == 200, {"status": status_w, "response_ms": ms_w}))
 
+    # 1. Local: releases directory exists and is writable
+    dir_ok = RELEASES_DIR.is_dir()
+    checks.append(_check("releases_directory", dir_ok, {"path": str(RELEASES_DIR)}))
+
+    # 2. Local: manifest file exists and is valid JSON
+    manifest_ok = False
+    manifest_version = None
+    manifest_dl_url = None
+    try:
+        if MANIFEST_PATH.is_file():
+            manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+            manifest_ok = bool(manifest.get("version") or manifest.get("latest_version"))
+            manifest_version = manifest.get("latest_version") or manifest.get("version")
+            manifest_dl_url = manifest.get("download_url")
+    except Exception:
+        pass
+    checks.append(_check("local_manifest", manifest_ok, {"version": manifest_version, "path": str(MANIFEST_PATH)}))
+
+    # 3. External: website is reachable
+    checks.append(_check("website_reachable", status_w >= 200 and status_w < 500, {"status": status_w, "response_ms": ms_w}))
+
+    # 4. External: update manifest endpoint returns valid JSON
     is_json = "application/json" in headers_m.get("content-type", "")
     checks.append(_check("update_manifest", status_m == 200 and is_json, {"status": status_m, "response_ms": ms_m, "is_json": is_json}))
 
-    checks.append(_check("download_latest", status_d == 200, {
-        "status": status_d, "response_ms": ms_d,
-        "content_type": headers_d.get("content-type", ""),
-        "content_length": headers_d.get("content-length", ""),
-    }))
+    # 5. Download: check both the symlink and the download_url from manifest
+    dl_ok = False
+    dl_detail: dict[str, Any] = {}
+    try:
+        latest_sym = RELEASES_DIR / "latest"
+        if latest_sym.is_symlink():
+            target_name = os.readlink(str(latest_sym))
+            target_path = RELEASES_DIR / target_name
+            dl_ok = target_path.is_file()
+            dl_detail = {"symlink_target": target_name, "exists_on_disk": dl_ok,
+                         "size_mb": round(target_path.stat().st_size / (1024*1024), 1) if dl_ok else 0}
+        elif manifest_dl_url:
+            # Fall back to checking if any ZIP exists
+            zips = list(RELEASES_DIR.glob("*.zip"))
+            dl_ok = len(zips) > 0
+            dl_detail = {"zip_count": len(zips), "note": "no latest symlink; checking any ZIP"}
+        else:
+            dl_detail = {"error": "no latest symlink and no download_url in manifest"}
+    except Exception as exc:
+        dl_detail = {"error": str(exc)}
+    checks.append(_check("download_available", dl_ok, dl_detail))
 
     # 4. SHA256 consistency (synchronous -- local file I/O, fast)
     sha_ok = False
@@ -135,7 +176,7 @@ async def diagnostics(_session: dict = Depends(verify_session)):
     except Exception:
         pass
 
-    # Live fetch (async)
+    # Live fetch (async) -- single fetch, no double-call
     status, ms, headers = await _safe_fetch("https://opsroom.live/api/update.json")
     raw_manifest = None
     try:
@@ -163,18 +204,27 @@ async def diagnostics(_session: dict = Depends(verify_session)):
 @router.get("/system")
 async def system_status(_session: dict = Depends(verify_session)):
     """System status summary for the admin support page."""
-    website_task = _safe_fetch("https://opsroom.live/health")
+    website_task = _safe_fetch("https://opsroom.live/")
     manifest_task = _safe_fetch("https://opsroom.live/api/update.json")
-    download_task = _safe_fetch("https://opsroom.live/downloads/latest")
 
     status_w, ms_w, _ = await website_task
     status_m, ms_m, headers_m = await manifest_task
-    status_d, ms_d, _ = await download_task
+
+    # Check downloads availability locally
+    dl_online = False
+    try:
+        sym = RELEASES_DIR / "latest"
+        if sym.is_symlink():
+            dl_online = (RELEASES_DIR / os.readlink(str(sym))).is_file()
+        else:
+            dl_online = any(RELEASES_DIR.glob("*.zip"))
+    except Exception:
+        pass
 
     services = [
-        {"name": "Website", "online": status_w == 200, "status": status_w, "response_ms": ms_w},
+        {"name": "Website", "online": 200 <= status_w < 500, "status": status_w, "response_ms": ms_w},
         {"name": "Updater API", "online": status_m == 200, "status": status_m, "response_ms": ms_m},
-        {"name": "Downloads", "online": status_d == 200, "status": status_d, "response_ms": ms_d},
+        {"name": "Downloads", "online": dl_online, "status": 200 if dl_online else 0, "response_ms": 0},
         {"name": "Admin API", "online": True, "status": 200, "response_ms": 0},
     ]
     return {

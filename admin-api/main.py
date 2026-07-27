@@ -14,6 +14,8 @@ import health
 import releases
 import analytics
 import audit
+import pricing
+import licenses
 
 app = FastAPI(title="OPS ROOM Admin API")
 
@@ -31,6 +33,8 @@ app.include_router(releases.router)
 app.include_router(health.router)
 app.include_router(analytics.router)
 app.include_router(audit.router)
+app.include_router(pricing.router)
+app.include_router(licenses.router)
 
 
 @app.get("/api/ping")

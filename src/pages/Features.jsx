@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from 'react';
 import SEO from '../components/SEO.jsx';
 import { PAGE_TITLES } from '../config/seo.js';
 
@@ -148,20 +149,108 @@ const MODULES = [
   },
 ];
 
+const METAR_AIRPORTS = [
+  { icao: 'EGLL', name: 'London Heathrow' },
+  { icao: 'KORD', name: "Chicago O'Hare" },
+  { icao: 'EHAM', name: 'Amsterdam Schiphol' },
+  { icao: 'RJTT', name: 'Tokyo Haneda' },
+];
+
+function MetarStrip() {
+  const [metars, setMetars] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchMetars = useCallback(() => {
+    const icaos = METAR_AIRPORTS.map((a) => a.icao).join(',');
+    fetch(`https://aviationweather.gov/api/data/metar?ids=${icaos}&format=raw&taf=false`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`METAR API ${res.status}`);
+        return res.text();
+      })
+      .then((text) => {
+        const lines = text.trim().split('\n').filter(Boolean);
+        const result = {};
+        METAR_AIRPORTS.forEach((a, i) => {
+          result[a.icao] = lines[i] || null;
+        });
+        setMetars(result);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    fetchMetars();
+    const id = setInterval(fetchMetars, 300000); // every 5 min
+    return () => clearInterval(id);
+  }, [fetchMetars]);
+
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+      border: '1px solid var(--line)', background: 'var(--bg-panel)',
+      marginBottom: '2.5rem',
+    }}>
+      {METAR_AIRPORTS.map((a) => (
+        <div key={a.icao} style={{
+          padding: '1rem 1.1rem', borderRight: '1px solid var(--line)',
+          display: 'flex', flexDirection: 'column', gap: '0.4rem',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem' }}>
+            <span style={{
+              fontFamily: 'var(--font-mono)', fontSize: '16px', fontWeight: 600,
+              color: 'var(--acc)', letterSpacing: '0.06em',
+            }}>{a.icao}</span>
+            <span style={{
+              fontFamily: 'var(--font-mono)', fontSize: '10px',
+              color: 'var(--fg-muted)', letterSpacing: '0.1em', textTransform: 'uppercase',
+            }}>{a.name}</span>
+          </div>
+          <span style={{
+            fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--fg-soft)',
+            letterSpacing: '0.02em', wordBreak: 'break-all',
+          }}>
+            {loading ? 'FETCHING...' : error
+              ? `${a.icao}: ERROR`
+              : metars[a.icao] || 'NO METAR'}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Features() {
   return (
     <>
       <SEO
         title={PAGE_TITLES.features}
-        description="OPS ROOM modules — VATSIM FIDS, Dispatch, Briefing, Flight Watch, Black Box, Flight Analysis, Ground Control, Runway Awareness, CPDLC Datalink, Network, Live Map, Kneeboard, Procedures, Logbook, Announcer, OBS Tools."
+        description="OPS ROOM modules -- VATSIM FIDS, Dispatch, Briefing, Flight Watch, Black Box, Flight Analysis, Ground Control, Runway Awareness, CPDLC Datalink, Network, Live Map, Kneeboard, Procedures, Logbook, Announcer, OBS Tools."
         path="/features"
       />
 
       <section className="section">
         <div className="container">
           <div className="section-head">
+            <span className="section-eyebrow">/ LIVE WEATHER</span>
+            <h2 className="section-title">Active METAR at major training hubs.</h2>
+            <p className="section-subtitle">
+              Real-time METAR from NOAA aviation weather. Refreshes every 5 minutes.
+            </p>
+          </div>
+          <MetarStrip />
+        </div>
+      </section>
+
+      <section className="section section-tight">
+        <div className="container">
+          <div className="section-head">
             <span className="section-eyebrow">/ ALL MODULES</span>
-            <h1 className="section-title">Sixteen modules in detail.</h1>
+            <h2 className="section-title">Sixteen modules in detail.</h2>
             <p className="section-subtitle">
               Every module runs locally in a single OPS ROOM process. They share
               telemetry, the dispatch board and the local SQLite ledger.

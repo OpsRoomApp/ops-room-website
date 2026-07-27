@@ -1,10 +1,39 @@
 import { Link } from 'react-router-dom';
+import { useVatsimStats } from '../hooks/useVatsimData.js';
+
+function VatsimTicker() {
+  const stats = useVatsimStats();
+
+  return (
+    <div className="vatsim-ticker" style={{
+      display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem 0',
+      fontFamily: 'var(--font-mono)', fontSize: '10.5px', letterSpacing: '0.08em',
+      textTransform: 'uppercase', color: 'var(--fg-muted)',
+      borderBottom: '1px solid var(--line)', marginBottom: '1.25rem',
+      flexWrap: 'wrap',
+    }}>
+      <span>
+        <span className="tag-dot" style={{ display: 'inline-block', marginRight: '0.35rem' }} />
+        VATSIM ONLINE
+      </span>
+      <span><strong style={{ color: 'var(--nominal)', fontWeight: 500 }}>
+        {stats.loading ? '...' : stats.pilots.toLocaleString()}
+      </strong> PILOTS</span>
+      <span><strong style={{ color: 'var(--acc)', fontWeight: 500 }}>
+        {stats.loading ? '...' : stats.controllers.toLocaleString()}
+      </strong> ATC</span>
+      <span style={{ color: 'var(--fg-faint)' }}>DATA.VATSIM.NET</span>
+      {stats.error && <span style={{ color: 'var(--alert)', fontSize: '9px' }}>ERR: {stats.error}</span>}
+    </div>
+  );
+}
 
 export default function Footer() {
   const year = new Date().getFullYear();
   return (
     <footer className="footer">
       <div className="container">
+        <VatsimTicker />
         <div className="footer-grid">
           <div>
             <div className="footer-brand-name">OPS ROOM</div>

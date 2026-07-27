@@ -8,6 +8,8 @@ import Releases from './pages/Releases.jsx';
 import Health from './pages/Health.jsx';
 import Support from './pages/Support.jsx';
 import AuditLog from './pages/AuditLog.jsx';
+import Pricing from './pages/Pricing.jsx';
+import Licensing from './pages/Licensing.jsx';
 
 export default function App() {
   return (
@@ -22,6 +24,8 @@ export default function App() {
             <Route path="health" element={<Health />} />
             <Route path="support" element={<Support />} />
             <Route path="audit" element={<AuditLog />} />
+            <Route path="pricing" element={<Pricing />} />
+            <Route path="licensing" element={<Licensing />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
