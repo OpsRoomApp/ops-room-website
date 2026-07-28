@@ -61,7 +61,17 @@ export default function Health() {
         </div>
       </div>
 
-      {error && <div className="mb-1"><span className="badge badge-err">ERROR</span> {error}</div>}
+      {error && (
+        <div className="card mb-2" style={{ borderColor: 'rgba(255,23,68,0.3)', background: 'rgba(255,23,68,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span className="badge badge-err">ERROR</span>
+            <span className="mono-dim" style={{ fontSize: '0.8rem' }}>{error}</span>
+          </div>
+          <div style={{ marginTop: '0.75rem', fontSize: '0.7rem', fontFamily: 'var(--font-mono)', color: 'var(--text-dim)' }}>
+            Make sure the admin API is running: <code style={{ background: 'rgba(255,255,255,0.05)', padding: '0.15rem 0.4rem' }}>cd admin-api && uvicorn main:app --host 0.0.0.0 --port 8000</code>
+          </div>
+        </div>
+      )}
 
       {loading && !data && !error && (
         <div className="card mb-2" style={{ textAlign: 'center', padding: '3rem 2rem' }}>

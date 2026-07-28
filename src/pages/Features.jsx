@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import SEO from '../components/SEO.jsx';
 import { PAGE_TITLES } from '../config/seo.js';
-import { fetcher } from '../hooks/useVatsimData.js';
 
 const MODULES = [
   {
@@ -163,22 +162,23 @@ function MetarStrip() {
   const [error, setError] = useState(null);
 
   const fetchMetars = useCallback(() => {
-    // Reuse the same fetcher as the FIDS widget (15s cache, request dedup)
-    fetcher()
-      .then(({ data }) => {
+    // Fetch real METAR from VATSIM METAR endpoint (CORS-friendly, real METAR strings)
+    const airportList = METAR_AIRPORTS.map((a) => a.icao);
+    Promise.all(
+      airportList.map((icao) =>
+        fetch(`https://metar.vatsim.net/metar.php?id=${icao}`)
+          .then((res) => {
+            if (!res.ok) return null;
+            return res.text();
+          })
+          .catch(() => null)
+      )
+    )
+      .then((results) => {
         const result = {};
-        METAR_AIRPORTS.forEach((a) => {
-          // Find ATIS controllers for this airport and extract text_atis
-          const atisList = (data.controllers || []).filter((c) => {
-            const cs = (c.callsign || '').toUpperCase();
-            return cs.startsWith(a.icao) && cs.includes('ATIS') && (c.text_atis || []).length > 0;
-          });
-          if (atisList.length > 0) {
-            const lines = atisList[0].text_atis || [];
-            result[a.icao] = lines.join(' ').trim();
-          } else {
-            result[a.icao] = null;
-          }
+        METAR_AIRPORTS.forEach((a, i) => {
+          const raw = (results[i] || '').trim();
+          result[a.icao] = raw || null;
         });
         setMetars(result);
         setLoading(false);
@@ -242,10 +242,10 @@ export default function Features() {
       <section className="section">
         <div className="container">
           <div className="section-head">
-            <span className="section-eyebrow">/ LIVE ATIS</span>
-            <h2 className="section-title">Active ATIS at major training hubs.</h2>
+            <span className="section-eyebrow">/ LIVE METAR</span>
+            <h2 className="section-title">Active METAR at major training hubs.</h2>
             <p className="section-subtitle">
-              Live ATIS from the VATSIM network. Refreshes every 5 minutes.
+              Real-time METAR via VATSIM. Refreshes every 5 minutes. Refreshes every 5 minutes.
             </p>
           </div>
           <MetarStrip />
