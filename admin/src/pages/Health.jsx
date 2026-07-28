@@ -63,6 +63,17 @@ export default function Health() {
 
       {error && <div className="mb-1"><span className="badge badge-err">ERROR</span> {error}</div>}
 
+      {loading && !data && !error && (
+        <div className="card mb-2" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--fg-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            CHECKING SYSTEM HEALTH...
+          </div>
+          <div style={{ marginTop: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--fg-faint)' }}>
+            The admin API must be running at localhost:8000 for health checks to work.
+          </div>
+        </div>
+      )}
+
       {tab === 'health' && data && (
         <>
           <div className="card mb-2">

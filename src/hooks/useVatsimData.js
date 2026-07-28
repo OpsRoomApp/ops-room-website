@@ -8,7 +8,7 @@ let _globalCacheTime = 0;
 let _globalCacheError = null;
 let _pendingFetch = null;
 
-function fetcher() {
+export function fetcher() {
   const now = Date.now();
   if (_globalCache && (now - _globalCacheTime) / 1000 < CACHE_SECONDS) {
     return Promise.resolve({ data: _globalCache, age: (now - _globalCacheTime) / 1000 });
