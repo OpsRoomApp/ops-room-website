@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 const API = '/api/health';
 
@@ -12,14 +12,20 @@ export default function Health() {
 
   const check = useCallback(() => {
     setLoading(true);
+    setError('');
     Promise.all([
       fetch(API, { credentials: 'include' }).then((r) => (r.ok ? r.json() : Promise.reject(r))),
       tab === 'diag' ? fetch(`${API}/diagnostics`, { credentials: 'include' }).then((r) => (r.ok ? r.json() : Promise.reject(r))) : Promise.resolve(null),
     ])
       .then(([d, di]) => { setData(d); setDiag(di); setError(''); })
-      .catch(() => setError('Health check failed'))
+      .catch((err) => {
+        console.error('Health check failed:', err);
+        setError(err?.status ? `Health check failed (HTTP ${err.status})` : 'Health check failed — is the admin API running?');
+      })
       .finally(() => setLoading(false));
   }, [tab]);
+
+  useEffect(() => { check(); }, [check]);
 
   const badge = (status) =>
     status === 'PASS'

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO.jsx';
 import { PAGE_TITLES, SITE } from '../config/seo.js';
@@ -39,6 +40,32 @@ const STRIP_LOOP = [
 ];
 
 export default function Home() {
+  useEffect(() => {
+    const cards = document.querySelectorAll('.tilt-card');
+    const onMouseMove = (e) => {
+      const card = e.currentTarget;
+      const rect = card.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      card.style.setProperty('--tilt-x', String(x));
+      card.style.setProperty('--tilt-y', String(y));
+    };
+    const onMouseLeave = (e) => {
+      e.currentTarget.style.setProperty('--tilt-x', '0');
+      e.currentTarget.style.setProperty('--tilt-y', '0');
+    };
+    cards.forEach((card) => {
+      card.addEventListener('mousemove', onMouseMove);
+      card.addEventListener('mouseleave', onMouseLeave);
+    });
+    return () => {
+      cards.forEach((card) => {
+        card.removeEventListener('mousemove', onMouseMove);
+        card.removeEventListener('mouseleave', onMouseLeave);
+      });
+    };
+  }, []);
+
   return (
     <>
       <SEO title={PAGE_TITLES.home} description={SITE.description} path="/" />
@@ -66,7 +93,7 @@ export default function Home() {
             </div>
           </div>
           <div>
-            <VatsimFIDS defaultAirport="EGLL" />
+            <VatsimFIDS defaultAirport="EGLL" compact />
           </div>
         </div>
       </section>
@@ -86,7 +113,7 @@ export default function Home() {
             <div className="strip-marquee">
               {[...STRIP_LOOP, ...STRIP_LOOP].map((s, i) => (
                 <figure key={`${s.file}-${i}`} className="strip-card">
-                  <a href={`/screenshots/${s.file}`} target="_blank" rel="noreferrer" className="strip-link">
+                  <a href={`/screenshots/${s.file}`} target="_blank" rel="noreferrer" className="strip-link tilt-card">
                     <img src={`/screenshots/${s.file}`} alt={`OPS ROOM · ${s.label}`} loading="lazy" />
                     <figcaption>{s.label}</figcaption>
                   </a>

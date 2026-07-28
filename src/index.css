@@ -358,7 +358,13 @@ h3 { font-size: 1rem; }
 }
 
 /* Hero */
-.hero { padding: 4.5rem 0 3.5rem; border-bottom: 1px solid var(--line); background: var(--bg-base); }
+.hero {
+  padding: 4.5rem 0 3.5rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-base);
+  position: relative;
+  overflow: hidden;
+}
 .hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
@@ -693,6 +699,24 @@ h3 { font-size: 1rem; }
 
 .fids-compact .fids-airport-flap { font-size: 28px; }
 .fids-compact .fids-table { font-size: 11.5px; }
+
+/* Homepage-compact FIDS: half the height, tighter rows */
+.fids-home { min-height: 0; max-height: 480px; }
+.fids-home .fids-airport { padding: 0.45rem 0.85rem; }
+.fids-home .fids-airport-flap { font-size: 24px; }
+.fids-home .fids-airport-name { font-size: 10px; }
+.fids-home .fids-metar { padding: 0.3rem 0.85rem; font-size: 10.5px; }
+.fids-home .fids-atis { padding: 0.3rem 0.85rem; font-size: 10px; }
+.fids-home .fids-search { padding: 0.35rem 0.85rem; }
+.fids-home .fids-search input { font-size: 13px; padding: 0.3rem 0.5rem; }
+.fids-home .fids-search-help { font-size: 8.5px; }
+.fids-home .fids-tab { padding: 0.45rem 0.8rem; font-size: 10px; min-height: 36px; }
+.fids-home .fids-table { font-size: 10.5px; }
+.fids-home .fids-table thead th { padding: 0.35rem 0.55rem; font-size: 9px; }
+.fids-home .fids-table tbody td { padding: 0.35rem 0.55rem; }
+.fids-home .fids-topbar { padding: 0.35rem 0.85rem; font-size: 9.5px; }
+.fids-home .fids-footer { padding: 0.35rem 0.85rem; font-size: 9px; }
+.fids-home .fids-clock .clock-value { font-size: 12px; }
 
 @media (max-width: 760px) {
   .fids-airport-flap { font-size: 28px; }
@@ -1083,4 +1107,98 @@ h3 { font-size: 1rem; }
 /* ----- Hero buttons wrap nicely on mobile ----- */
 .hero-actions .btn {
   white-space: nowrap;
+}
+
+/* ---------- Parallax hero depth layer ---------- */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.03;
+  background-image:
+    repeating-linear-gradient(0deg, var(--acc) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(90deg, var(--acc) 0 1px, transparent 1px 60px);
+  background-size: 100% 40px, 60px 100%;
+  transform: translateY(calc(var(--parallax-y, 0) * 0.08px));
+  pointer-events: none;
+  will-change: transform;
+}
+.hero > * { position: relative; z-index: 1; }
+
+/* 3D card tilt on hover (used by perspective-card wrapper) */
+.tilt-card {
+  transition: transform 300ms ease-out, box-shadow 300ms ease-out;
+  transform-style: preserve-3d;
+}
+.tilt-card:hover {
+  transform: rotateY(calc(var(--tilt-x, 0) * 4deg)) rotateX(calc(var(--tilt-y, 0) * -4deg));
+  box-shadow: 0 8px 32px rgba(0, 229, 255, 0.08);
+}
+
+/* Parallax depth on screenshot strip */
+.strip-wrap {
+  perspective: 1200px;
+}
+/* 3D tilt on cards: merge rotate into strip-card hover via the tilt-card class */
+.strip-card.tilt-card:hover {
+  transform: translateY(-6px) scale(1.03) rotateY(calc(var(--tilt-x, 0) * 4deg)) rotateX(calc(var(--tilt-y, 0) * -4deg));
+  border-color: var(--acc);
+  box-shadow: 0 12px 40px rgba(0, 229, 255, 0.06);
+}
+
+/* Scroll-triggered section reveal */
+.section-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 600ms ease-out, transform 600ms ease-out;
+}
+.section-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Hero headline subtle float */
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.hero-headline {
+  animation: hero-float 8s ease-in-out infinite;
+}
+
+/* Accent glow pulse on hover for primary buttons */
+.btn-primary {
+  transition: background 200ms, border-color 200ms, box-shadow 300ms;
+}
+.btn-primary:hover {
+  box-shadow: 0 0 24px rgba(0, 229, 255, 0.18);
+}
+
+/* Module brief card lift */
+.module-brief {
+  transition: transform 200ms ease, background 200ms ease;
+}
+.module-brief:hover {
+  transform: translateY(-2px);
+  background: rgba(0, 229, 255, 0.02);
+}
+
+/* Integration card hover depth */
+.integration {
+  transition: transform 200ms ease, background 200ms ease;
+}
+.integration:hover {
+  transform: translateY(-2px);
+  background: var(--bg-elevated);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .hero-headline { animation: none; }
+  .strip-card:hover { transform: none; }
+  .module-brief:hover { transform: none; }
+  .integration:hover { transform: none; }
+  .section-reveal { opacity: 1; transform: none; transition: none; }
+  .tilt-card:hover { transform: none !important; box-shadow: none; }
 }

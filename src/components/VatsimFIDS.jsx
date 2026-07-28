@@ -26,7 +26,7 @@ function acShort(ac) {
   return ac.length <= 4 ? ac : ac.slice(0, 5);
 }
 
-export default function VatsimFIDS({ defaultAirport = 'EGLL' }) {
+export default function VatsimFIDS({ defaultAirport = 'EGLL', compact = false }) {
   const [airport, setAirport] = useState(defaultAirport);
   const [tab, setTab] = useState('departures');
   const [clock, setClock] = useState(zuluNow());
@@ -166,7 +166,7 @@ export default function VatsimFIDS({ defaultAirport = 'EGLL' }) {
   }, [tab]);
 
   return (
-    <div className="fids">
+    <div className={`fids${compact ? ' fids-home' : ''}`}>
       <div className="fids-topbar">
         <div className="fids-eyebrow">
           <span className="tag-dot" /> OPS ROOM / VATSIM FIDS
