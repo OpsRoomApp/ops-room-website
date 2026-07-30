@@ -16,13 +16,19 @@ import analytics
 import audit
 import pricing
 import licenses
+import opensky
 
 app = FastAPI(title="OPS ROOM Admin API")
 
-# CORS: allow the admin frontend origin.
+# CORS: allow admin frontend, main website, and desktop app (localhost).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://admin.opsroom.live"],
+    allow_origins=[
+        "https://admin.opsroom.live",
+        "https://opsroom.live",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -35,6 +41,7 @@ app.include_router(analytics.router)
 app.include_router(audit.router)
 app.include_router(pricing.router)
 app.include_router(licenses.router)
+app.include_router(opensky.router)
 
 
 @app.get("/api/ping")
