@@ -4,6 +4,12 @@ OPS ROOM Admin API -- Discord Administration Backend
 Endpoints for the Discord admin dashboard.
 Uses the existing GitHub OAuth JWT session authentication.
 All endpoints require a valid admin session.
+
+The OPS CONTROL bot database location is read exclusively from the
+environment (OPS_CONTROL_DB) -- never derived from __file__ or a hardcoded
+host path.  This keeps the service deployable in any container layout; if the
+database is not configured or mounted, endpoints return a clean 503 instead
+of crashing at startup.
 """
 
 from __future__ import annotations
@@ -11,9 +17,10 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Iterator
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from auth import verify_session
@@ -21,22 +28,68 @@ from auth import verify_session
 _log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/discord", tags=["discord"])
 
-# Database path -- use the same SQLite DB as the bot
-_DB_PATH = Path(
-    os.getenv(
-        "OPS_CONTROL_DB_PATH",
-        str(Path(__file__).resolve().parents[3] / "ops-control-bot" / "data" / "ops-control.db"),
-    )
+
+def _resolve_db_path() -> str | None:
+    """Resolve the OPS CONTROL SQLite database path from the environment.
+
+    Precedence: OPS_CONTROL_DB, then OPS_CONTROL_DB_PATH (legacy), then
+    DATABASE_PATH (the bot's own env convention).  Returns None when no
+    path is configured -- callers must degrade gracefully.
+
+    The configured path must be an absolute path inside this container:
+    relative values would resolve against the admin-api working directory
+    and produce a misleading "not found" 503.
+    """
+    for key in ("OPS_CONTROL_DB", "OPS_CONTROL_DB_PATH", "DATABASE_PATH"):
+        value = os.getenv(key)
+        if value and value.strip():
+            return value.strip()
+    return None
+
+
+_DB_NOT_CONFIGURED = (
+    "OPS CONTROL database is not configured. Set the OPS_CONTROL_DB "
+    "environment variable to the bot database path."
 )
 
 
 def _get_db() -> sqlite3.Connection:
-    """Open a connection to the bot database."""
-    if not _DB_PATH.exists():
-        raise HTTPException(status_code=503, detail="Bot database not found")
-    conn = sqlite3.connect(str(_DB_PATH))
+    """Open a connection to the bot database, or raise 503 when unavailable."""
+    db_path = _resolve_db_path()
+    if not db_path:
+        raise HTTPException(status_code=503, detail=_DB_NOT_CONFIGURED)
+
+    db = Path(db_path)
+    if not db.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail=f"OPS CONTROL database not found at configured path: {db_path}",
+        )
+
+    try:
+        conn = sqlite3.connect(str(db))
+    except sqlite3.Error as exc:
+        _log.error("Failed to open OPS CONTROL database at %s: %s", db_path, exc)
+        raise HTTPException(status_code=503, detail="OPS CONTROL database is unavailable") from exc
+
     conn.row_factory = sqlite3.Row
     return conn
+
+
+@contextmanager
+def _db_session() -> Iterator[sqlite3.Connection]:
+    """Yield a bot-DB connection; convert any query failure to a clean 503."""
+    conn = _get_db()
+    try:
+        yield conn
+        conn.commit()
+    except sqlite3.Error as exc:
+        _log.error("OPS CONTROL database query failed: %s", exc)
+        raise HTTPException(
+            status_code=503, detail="OPS CONTROL database is unavailable"
+        ) from exc
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -47,8 +100,7 @@ def _get_db() -> sqlite3.Connection:
 @router.get("/status")
 async def discord_status(_session: dict = Depends(verify_session)):
     """Return Discord server and bot health status."""
-    conn = _get_db()
-    try:
+    with _db_session() as conn:
         user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
         log_count = conn.execute("SELECT COUNT(*) FROM logs").fetchone()[0]
         bug_count = conn.execute("SELECT COUNT(*) FROM bugs").fetchone()[0]
@@ -59,8 +111,6 @@ async def discord_status(_session: dict = Depends(verify_session)):
             "SELECT COUNT(*) FROM notams WHERE is_active = 1"
         ).fetchone()[0]
         flight_count = conn.execute("SELECT COUNT(*) FROM flight_logs").fetchone()[0]
-    finally:
-        conn.close()
 
     return {
         "status": "online",
@@ -82,8 +132,7 @@ async def discord_status(_session: dict = Depends(verify_session)):
 @router.get("/analytics")
 async def discord_analytics(_session: dict = Depends(verify_session)):
     """Return command usage and error analytics."""
-    conn = _get_db()
-    try:
+    with _db_session() as conn:
         cmd_counts = conn.execute(
             "SELECT event_type, COUNT(*) as cnt FROM logs GROUP BY event_type ORDER BY cnt DESC"
         ).fetchall()
@@ -93,8 +142,6 @@ async def discord_analytics(_session: dict = Depends(verify_session)):
         ).fetchall()
 
         total = conn.execute("SELECT COUNT(*) FROM logs").fetchone()[0]
-    finally:
-        conn.close()
 
     return {
         "total_events": total,
@@ -118,8 +165,7 @@ async def discord_tickets(
     status: str = "open",
 ):
     """Return support tickets and bug reports."""
-    conn = _get_db()
-    try:
+    with _db_session() as conn:
         tickets = conn.execute(
             "SELECT * FROM tickets WHERE status = ? ORDER BY created_at DESC LIMIT 50",
             (status,),
@@ -129,8 +175,6 @@ async def discord_tickets(
             "SELECT * FROM bugs WHERE status = ? ORDER BY created_at DESC LIMIT 50",
             (status,),
         ).fetchall()
-    finally:
-        conn.close()
 
     return {
         "tickets": [
@@ -181,8 +225,7 @@ async def create_announcement(
             status_code=400, detail="title, content, and channel_id are required"
         )
 
-    conn = _get_db()
-    try:
+    with _db_session() as conn:
         conn.execute(
             """
             INSERT INTO discord_announcements (title, content, channel_id, scheduled_at, status)
@@ -190,10 +233,7 @@ async def create_announcement(
             """,
             (title, content, channel_id, scheduled_at),
         )
-        conn.commit()
         announcement_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
-    finally:
-        conn.close()
 
     return {"id": announcement_id, "status": "pending", "message": "Announcement scheduled"}
 
@@ -221,8 +261,7 @@ async def broadcast_announcement(
             status_code=400, detail="title, content, and channel_id are required"
         )
 
-    conn = _get_db()
-    try:
+    with _db_session() as conn:
         conn.execute(
             """
             INSERT INTO discord_announcements (title, content, channel_id, announced_at, status)
@@ -230,10 +269,7 @@ async def broadcast_announcement(
             """,
             (title, content, channel_id, datetime.now(timezone.utc).isoformat()),
         )
-        conn.commit()
         announcement_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
-    finally:
-        conn.close()
 
     return {
         "id": announcement_id,

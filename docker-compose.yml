@@ -44,9 +44,16 @@ services:
       - RATE_LIMIT_LOGIN_PER_MIN=${RATE_LIMIT_LOGIN_PER_MIN:-10}
       - RATE_LIMIT_UPLOAD_PER_MIN=${RATE_LIMIT_UPLOAD_PER_MIN:-5}
       - ANALYTICS_RETENTION_DAYS=${ANALYTICS_RETENTION_DAYS:-90}
+      # Path to the OPS CONTROL bot SQLite database. When set, the Discord
+      # admin endpoints read live bot data. Optional -- the API starts
+      # without it and reports the bot database as unavailable.
+      - OPS_CONTROL_DB=${OPS_CONTROL_DB:-}
     volumes:
       - /opt/opsroom-releases:/opt/opsroom-releases
       - admin-logs:/var/log
+      # To serve live bot data, mount the bot data directory here, e.g.:
+      # - /opt/ops-control-bot/data:/ops-control-data:ro
+      # then set OPS_CONTROL_DB=/ops-control-data/ops-control.db above.
     networks:
       - opsroom-net
     healthcheck:
