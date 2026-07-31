@@ -17,6 +17,7 @@ import audit
 import pricing
 import licenses
 import opensky
+import discord
 
 app = FastAPI(title="OPS ROOM Admin API")
 
@@ -42,6 +43,7 @@ app.include_router(audit.router)
 app.include_router(pricing.router)
 app.include_router(licenses.router)
 app.include_router(opensky.router)
+app.include_router(discord.router)
 
 
 @app.get("/api/ping")
