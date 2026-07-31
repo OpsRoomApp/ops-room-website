@@ -23,12 +23,15 @@ from fastapi.responses import JSONResponse
 _log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["opensky"])
 
-OPENSKY_CLIENT_ID = os.environ.get(
-    "OPENSKY_CLIENT_ID", "badgujarnishant@gmail.com-api-client"
-)
-OPENSKY_CLIENT_SECRET = os.environ.get(
-    "OPENSKY_CLIENT_SECRET", "HQbVw1jnP40p5kDC0Z3lDL6KkUJZLIZt"
-)
+OPENSKY_CLIENT_ID = os.environ.get("OPENSKY_CLIENT_ID", "")
+OPENSKY_CLIENT_SECRET = os.environ.get("OPENSKY_CLIENT_SECRET", "")
+
+if not OPENSKY_CLIENT_ID or not OPENSKY_CLIENT_SECRET:
+    _log.warning(
+        "OpenSky credentials not configured — set OPENSKY_CLIENT_ID and "
+        "OPENSKY_CLIENT_SECRET in the environment.  Real-world flight "
+        "search will return 502 until credentials are provided."
+    )
 
 # In-memory cache: {cache_key: {"timestamp": float, "data": dict}}
 _CACHE: dict[str, dict[str, Any]] = {}
