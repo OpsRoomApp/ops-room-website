@@ -53,7 +53,7 @@ services:
       - admin-logs:/var/log
       - /opt/ops-control-bot/data:/ops-control-data:ro
       # To serve live bot data, mount the bot data directory here, e.g.:
-      # - /opt/ops-control-bot/data:/ops-control-data:ro
+      - /opt/ops-control-bot/data:/ops-control-data:ro
       # then set OPS_CONTROL_DB=/ops-control-data/ops-control.db above.
     networks:
       - opsroom-net
