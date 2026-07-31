@@ -11,6 +11,9 @@ import AuditLog from './pages/AuditLog.jsx';
 import Pricing from './pages/Pricing.jsx';
 import Licensing from './pages/Licensing.jsx';
 import DiscordAdmin from './pages/DiscordAdmin.jsx';
+import DiscordUsers from './pages/DiscordUsers.jsx';
+import BetaTesters from './pages/BetaTesters.jsx';
+import DiscordAudit from './pages/DiscordAudit.jsx';
 
 export default function App() {
   return (
@@ -28,6 +31,9 @@ export default function App() {
             <Route path="pricing" element={<Pricing />} />
             <Route path="licensing" element={<Licensing />} />
             <Route path="discord" element={<DiscordAdmin />} />
+            <Route path="discord-users" element={<DiscordUsers />} />
+            <Route path="beta-testers" element={<BetaTesters />} />
+            <Route path="discord-audit" element={<DiscordAudit />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

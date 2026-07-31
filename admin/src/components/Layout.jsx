@@ -37,6 +37,9 @@ export default function Layout() {
           <NavLink to="/pricing">Pricing</NavLink>
           <NavLink to="/licensing">Licensing</NavLink>
           <NavLink to="/discord">Discord</NavLink>
+          <NavLink to="/discord-users">Users</NavLink>
+          <NavLink to="/beta-testers">Beta Testers</NavLink>
+          <NavLink to="/discord-audit">Audit Log</NavLink>
           <NavLink to="/audit">Audit</NavLink>
           <NavLink to="/support">Support</NavLink>
         </nav>
