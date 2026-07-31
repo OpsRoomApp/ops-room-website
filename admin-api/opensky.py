@@ -98,7 +98,7 @@ def _aircraft_type_matches(icao24: str, query: str) -> bool:
 async def _get_opensky_token(client: httpx.AsyncClient) -> str | None:
     """Fetch a short-lived OAuth2 access token from OpenSky."""
     token_url = (
-        "https://auth.opensky-network.org/auth/realms/master/"
+        "https://auth.opensky-network.org/auth/realms/opensky-network/"
         "protocol/openid-connect/token"
     )
     payload = {
