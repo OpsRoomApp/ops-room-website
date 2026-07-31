@@ -47,10 +47,11 @@ services:
       # Path to the OPS CONTROL bot SQLite database. When set, the Discord
       # admin endpoints read live bot data. Optional -- the API starts
       # without it and reports the bot database as unavailable.
-      - OPS_CONTROL_DB=${OPS_CONTROL_DB:-}
+      - OPS_CONTROL_DB=/ops-control-data/ops-control.db
     volumes:
       - /opt/opsroom-releases:/opt/opsroom-releases
       - admin-logs:/var/log
+      - /opt/ops-control-bot/data:/ops-control-data:ro
       # To serve live bot data, mount the bot data directory here, e.g.:
       # - /opt/ops-control-bot/data:/ops-control-data:ro
       # then set OPS_CONTROL_DB=/ops-control-data/ops-control.db above.
