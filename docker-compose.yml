@@ -51,10 +51,8 @@ services:
     volumes:
       - /opt/opsroom-releases:/opt/opsroom-releases
       - admin-logs:/var/log
+      # Shared OPS CONTROL bot SQLite database (same volume the bot uses).
       - /opt/ops-control-bot/data:/ops-control-data
-      # To serve live bot data, mount the bot data directory here, e.g.:
-      - /opt/ops-control-bot/data:/ops-control-data
-      # then set OPS_CONTROL_DB=/ops-control-data/ops-control.db above.
     networks:
       - opsroom-net
     healthcheck:

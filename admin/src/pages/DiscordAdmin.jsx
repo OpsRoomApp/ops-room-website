@@ -46,6 +46,7 @@ export default function DiscordAdmin() {
   const [tickets, setTickets] = useState(null);
   const [ticketFilter, setTicketFilter] = useState('open');
   const [announcements, setAnnouncements] = useState([]);
+  const [pendingActions, setPendingActions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [annForm, setAnnForm] = useState({ title: '', content: '', channel_id: '', embed_color: '#3498db', image_url: '', scheduled_at: '' });
@@ -66,8 +67,9 @@ export default function DiscordAdmin() {
       fetchApi('/analytics'),
       fetchApi('/tickets?status=open'),
       fetchApi('/announcements'),
+      fetchApi('/pending-actions'),
     ])
-      .then(([s, a, t, ann]) => { setStatus(s); setAnalytics(a); setTickets(t); setAnnouncements(ann); })
+      .then(([s, a, t, ann, pa]) => { setStatus(s); setAnalytics(a); setTickets(t); setAnnouncements(ann); setPendingActions(pa); })
       .catch((e) => setError(`Connection error: ${e.message}`))
       .finally(() => setLoading(false));
   };
@@ -243,6 +245,33 @@ export default function DiscordAdmin() {
       {tab === 'announcements' && (
         <>
           <div className="card mb-2">
+            <div className="card-head">DISPATCH QUEUE STATUS</div>
+            <div className="grid-4">
+              {['pending', 'scheduled', 'processing', 'completed', 'failed'].map((s) => (
+                <StatCard key={s} label={s.toUpperCase()} value={pendingActions?.counts?.[s] ?? 0} />
+              ))}
+            </div>
+          </div>
+
+          <div className="card mb-2">
+            <div className="card-head">PENDING ACTIONS</div>
+            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              {(pendingActions?.actions || []).slice(0, 20).map((a) => (
+                <div key={a.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: '0.75rem' }}>
+                  <span className="mono-dim">#{a.id}</span>
+                  <span style={{ color: 'var(--acc)' }}>{a.action_type}</span>
+                  <span className={`badge badge-${a.status === 'completed' ? 'ok' : a.status === 'failed' ? 'err' : a.status === 'processing' ? 'warn' : 'dim'}`}>{a.status}</span>
+                  <span className="dim">attempts: {a.attempts}</span>
+                  <span className="dim" style={{ marginLeft: 'auto' }}>{a.created_at?.slice(0, 19)}</span>
+                </div>
+              ))}
+              {(!pendingActions?.actions || pendingActions.actions.length === 0) && (
+                <div className="dim" style={{ padding: '0.5rem 0', fontSize: '0.75rem' }}>Queue is empty.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="card mb-2">
             <div className="card-head">CREATE ANNOUNCEMENT</div>
             <form onSubmit={handleAnnounce} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <input className="input" placeholder="Title" value={annForm.title} onChange={(e) => setAnnForm({ ...annForm, title: e.target.value })} required />
@@ -266,7 +295,10 @@ export default function DiscordAdmin() {
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <span className="mono-dim">#{a.id}</span>
                     <span style={{ color: 'var(--acc)' }}>{a.title}</span>
-                    <span className={`badge badge-${a.status === 'sent' ? 'ok' : 'warn'}`}>{a.status}</span>
+                    <span className={`badge badge-${(a.queue_status || a.status) === 'completed' || a.status === 'sent' ? 'ok' : (a.queue_status || a.status) === 'failed' ? 'err' : 'warn'}`}>{a.queue_status || a.status}</span>
+                    {a.queue_status && a.queue_status !== a.status && a.status !== 'completed' && (
+                      <span className="dim" style={{ fontSize: '0.65rem' }}>record: {a.status}</span>
+                    )}
                     <span className="dim">Channel: {a.channel_id}</span>
                   </div>
                   <div className="dim" style={{ fontSize: '0.7rem', marginTop: '0.2rem' }}>

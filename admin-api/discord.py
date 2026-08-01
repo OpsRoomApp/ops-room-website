@@ -48,11 +48,58 @@ def _get_db() -> sqlite3.Connection:
     if not db.is_file():
         raise HTTPException(status_code=503, detail=f"Database not found: {db_path}")
     try:
-        conn = sqlite3.connect(str(db))
+        conn = sqlite3.connect(str(db), timeout=10)
     except sqlite3.Error as exc:
         raise HTTPException(status_code=503, detail="Database unavailable") from exc
     conn.row_factory = sqlite3.Row
+    # Shared database with the bot container: WAL + busy timeout avoid
+    # "database is locked" errors under concurrent access.
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=5000")
+        conn.execute("PRAGMA foreign_keys=ON")
+    except sqlite3.Error:
+        pass
     return conn
+
+
+# Canonical pending_actions columns the bot owns. The admin API must never
+# diverge from this schema. Validated before queue writes.
+_CANONICAL_PENDING_COLUMNS = {
+    "id", "action_type", "payload_json", "status", "created_at",
+    "scheduled_at", "processing_started_at", "processed_at",
+    "attempts", "error", "result_json",
+}
+
+
+def _validate_pending_schema(conn: sqlite3.Connection) -> None:
+    """Return a clear error if the shared DB is incompatible with the queue.
+
+    The bot owns schema migration; if a legacy `payload`-only table exists
+    the bot will rebuild it on next start. Until then we refuse to write.
+    """
+    try:
+        rows = conn.execute("PRAGMA table_info(pending_actions)").fetchall()
+    except sqlite3.Error as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="OPS CONTROL database unavailable: could not inspect pending_actions",
+        ) from exc
+    cols = {r["name"] for r in rows}
+    if not cols:
+        raise HTTPException(
+            status_code=503,
+            detail="pending_actions table missing. Restart the OPS CONTROL bot to create it.",
+        )
+    missing = _CANONICAL_PENDING_COLUMNS - cols
+    if missing:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "pending_actions schema is outdated; the OPS CONTROL bot will migrate it "
+                f"on next start. Missing columns: {sorted(missing)}"
+            ),
+        )
 
 
 @contextmanager
@@ -327,14 +374,38 @@ async def reopen_ticket(
 
 @router.get("/announcements")
 async def list_announcements(_session: dict = Depends(verify_session)):
+    """List announcements plus their live dispatch-queue status."""
     with _db_session() as conn:
         rows = conn.execute(
             "SELECT id, title, content, channel_id, scheduled_at, announced_at, status "
             "FROM discord_announcements ORDER BY id DESC LIMIT 50"
         ).fetchall()
+        pending = conn.execute(
+            "SELECT id, action_type, payload_json, status, scheduled_at "
+            "FROM pending_actions "
+            "WHERE action_type IN ('announcement','scheduled_announcement','announce_dispatch') "
+            "ORDER BY id DESC LIMIT 100"
+        ).fetchall()
 
-    return [
-        {
+    pending_by_announcement: dict = {}
+    for p in pending:
+        try:
+            payload = json.loads(p["payload_json"] or "{}")
+        except (json.JSONDecodeError, TypeError):
+            payload = {}
+        ann_id = payload.get("announcement_id")
+        if ann_id is not None:
+            pending_by_announcement[int(ann_id)] = {
+                "queue_id": p["id"],
+                "action_type": p["action_type"],
+                "status": p["status"],
+                "scheduled_at": p["scheduled_at"],
+                "attempts": payload.get("attempts", 0),
+            }
+
+    result = []
+    for r in rows:
+        item = {
             "id": r["id"],
             "title": r["title"],
             "content": (r["content"] or "")[:200],
@@ -343,8 +414,71 @@ async def list_announcements(_session: dict = Depends(verify_session)):
             "announced_at": r["announced_at"],
             "status": r["status"],
         }
-        for r in rows
-    ]
+        queue = pending_by_announcement.get(r["id"])
+        if queue:
+            # The live dispatch status (pending/scheduled/processing/completed/failed)
+            item["queue_status"] = queue["status"]
+            item["queue_id"] = queue["queue_id"]
+            item["queue_action_type"] = queue["action_type"]
+        else:
+            item["queue_status"] = None
+        result.append(item)
+    return result
+
+
+# ===================================================================
+# GET /api/discord/pending-actions  (monitor the dispatch queue)
+# ===================================================================
+
+
+@router.get("/pending-actions")
+async def list_pending_actions(
+    _session: dict = Depends(verify_session),
+    status: str = Query("", max_length=20),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Monitor the pending_actions queue (statuses + recent actions)."""
+    with _db_session() as conn:
+        counts = conn.execute(
+            "SELECT status, COUNT(*) as cnt FROM pending_actions GROUP BY status"
+        ).fetchall()
+        if status:
+            rows = conn.execute(
+                "SELECT id, action_type, status, created_at, scheduled_at, "
+                "processing_started_at, processed_at, attempts, error, result_json "
+                "FROM pending_actions WHERE status = ? ORDER BY id DESC LIMIT ?",
+                (status, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, action_type, status, created_at, scheduled_at, "
+                "processing_started_at, processed_at, attempts, error, result_json "
+                "FROM pending_actions ORDER BY id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+
+    counts_map = {"pending": 0, "scheduled": 0, "processing": 0, "completed": 0, "failed": 0}
+    for c in counts:
+        counts_map[c["status"]] = c["cnt"]
+
+    return {
+        "counts": counts_map,
+        "actions": [
+            {
+                "id": r["id"],
+                "action_type": r["action_type"],
+                "status": r["status"],
+                "created_at": r["created_at"],
+                "scheduled_at": r["scheduled_at"],
+                "processing_started_at": r["processing_started_at"],
+                "processed_at": r["processed_at"],
+                "attempts": r["attempts"],
+                "error": r["error"],
+                "result_json": r["result_json"],
+            }
+            for r in rows
+        ],
+    }
 
 
 # ===================================================================
@@ -361,47 +495,57 @@ async def create_announcement(
     title = str(body.get("title", "")).strip()
     content = str(body.get("content", "")).strip()
     channel_id = int(body.get("channel_id", 0))
-    scheduled_at = body.get("scheduled_at")
-    embed_color = body.get("embed_color")
-    image_url = body.get("image_url")
+    scheduled_at = body.get("scheduled_at") or None
+    embed_color = body.get("embed_color") or None
+    image_url = body.get("image_url") or None
 
     if not title or not content or not channel_id:
         raise HTTPException(status_code=400, detail="title, content, and channel_id are required")
 
     with _db_session() as conn:
+        _validate_pending_schema(conn)
+
+        # Status: 'scheduled' when a future time is set, else 'pending'.
+        row_status = "scheduled" if scheduled_at else "pending"
         conn.execute(
             """
             INSERT INTO discord_announcements
                 (title, content, channel_id, scheduled_at, status)
-            VALUES (?, ?, ?, ?, 'pending')
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (title, content, channel_id, scheduled_at),
+            (title, content, channel_id, scheduled_at, row_status),
         )
         announcement_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
-        # If embed_color or image_url provided, store as a pending action with extra metadata
-        if embed_color or image_url:
-            meta = {}
-            if embed_color:
-                meta["embed_color"] = embed_color
-            if image_url:
-                meta["image_url"] = image_url
+        # ALWAYS enqueue a pending action for the bot to dispatch.
+        # Canonical columns only: payload_json, status, created_at, scheduled_at.
+        action_type = "scheduled_announcement" if scheduled_at else "announcement"
+        payload = {
+            "announcement_id": announcement_id,
+            "title": title,
+            "content": content,
+            "channel_id": channel_id,
+            "scheduled_at": scheduled_at,
+        }
+        if embed_color:
+            payload["embed_color"] = embed_color
+        if image_url:
+            payload["image_url"] = image_url
 
-            conn.execute(
-                """
-                INSERT INTO pending_actions (action_type, payload_json, status, created_at)
-                VALUES ('announce_dispatch', ?, 'pending', ?)
-                """,
-                (json.dumps({
-                    "announcement_id": announcement_id,
-                    "title": title,
-                    "content": content,
-                    "channel_id": channel_id,
-                    **meta,
-                }), _now_iso()),
-            )
+        conn.execute(
+            """
+            INSERT INTO pending_actions
+                (action_type, payload_json, status, created_at, scheduled_at)
+            VALUES (?, ?, 'pending', ?, ?)
+            """,
+            (action_type, json.dumps(payload), _now_iso(), scheduled_at),
+        )
 
-    return {"id": announcement_id, "status": "pending", "message": "Announcement scheduled"}
+    return {
+        "id": announcement_id,
+        "status": row_status,
+        "message": "Announcement scheduled" if scheduled_at else "Announcement queued for dispatch",
+    }
 
 
 # ===================================================================
@@ -626,13 +770,17 @@ async def update_beta_tester(
                 (new_beta, _now_iso(), discord_id),
             )
 
-        # Queue a pending action for the bot to assign/remove Discord roles
+        # Queue a pending action for the bot to assign/remove Discord roles.
+        # Canonical columns only (payload_json); legacy 'payload' is rebuilt
+        # by the bot's migration.
+        _validate_pending_schema(conn)
         conn.execute(
             """
             INSERT INTO pending_actions (action_type, payload_json, status, created_at)
-            VALUES ('beta_role_change', ?, 'pending', ?)
+            VALUES (?, ?, 'pending', ?)
             """,
             (
+                action,
                 json.dumps({
                     "discord_id": discord_id,
                     "username": existing["username"],
@@ -647,7 +795,7 @@ async def update_beta_tester(
         "ok": True,
         "discord_id": discord_id,
         "username": existing["username"],
-        "beta_status": bool(beta_status),
+        "beta_status": bool(new_beta),
         "action": action,
     }
 
