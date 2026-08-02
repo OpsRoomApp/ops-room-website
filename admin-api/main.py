@@ -17,9 +17,25 @@ import audit
 import pricing
 import licenses
 import opensky
+import transcripts  # v0.25.55 (C1)
+import appeals     # v0.25.55 (C4)
 import discord
 
 app = FastAPI(title="OPS ROOM Admin API")
+
+
+@app.on_event("startup")
+async def _startup() -> None:
+    """Start background tasks (transcript retention cleanup, allowlist seed)."""
+    try:
+        transcripts.start_cleanup_task()
+    except Exception:
+        pass
+    try:
+        import allowlist
+        allowlist.seed_from_env()
+    except Exception:
+        pass
 
 # CORS: allow admin frontend, main website, and desktop app (localhost).
 app.add_middleware(
@@ -43,6 +59,8 @@ app.include_router(audit.router)
 app.include_router(pricing.router)
 app.include_router(licenses.router)
 app.include_router(opensky.router)
+app.include_router(transcripts.router)
+app.include_router(appeals.router)
 app.include_router(discord.router)
 
 

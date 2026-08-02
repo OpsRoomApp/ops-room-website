@@ -47,3 +47,14 @@ LOG_FILE = Path(os.getenv("ADMIN_LOG_FILE", "/var/log/opsroom-admin.log"))
 
 # ---- Analytics retention (days) ----
 ANALYTICS_RETENTION_DAYS = int(os.getenv("ANALYTICS_RETENTION_DAYS", "90"))
+
+# v0.25.55 -- Transcript retention (C1)
+TRANSCRIPT_RETENTION_DAYS = int(os.getenv("TRANSCRIPT_RETENTION_DAYS", "14"))
+
+# v0.25.55 -- Discord OAuth (C3)
+DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "")
+DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
+DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "https://admin.opsroom.live/api/auth/discord/callback")
+APPROVED_DISCORD_USERS = set(
+    uid.strip().lower() for uid in os.getenv("APPROVED_DISCORD_USERS", "").split(",") if uid.strip()
+)

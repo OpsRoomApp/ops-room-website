@@ -15,7 +15,7 @@ function StatCard({ label, value, sub }) {
 
 function TabBar({ tabs, active, onSelect }) {
   return (
-    <div style={{ display: 'flex', gap: '0', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+    <div style={{ display: 'flex', gap: '0', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
       {tabs.map((t) => (
         <button
           key={t.key}
@@ -39,6 +39,25 @@ function TabBar({ tabs, active, onSelect }) {
   );
 }
 
+// Dependency-free horizontal bar chart (divs only) for time-series data.
+function SimpleBarChart({ data, labelKey, valueKey, accent = 'var(--acc)' }) {
+  const max = Math.max(1, ...(data || []).map((d) => Number(d[valueKey]) || 0));
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+      {(data || []).map((d, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span className="mono-dim" style={{ width: '72px', flexShrink: 0, fontSize: '0.65rem', textAlign: 'right' }}>{d[labelKey]}</span>
+          <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: '2px', height: '14px', overflow: 'hidden' }}>
+            <div style={{ width: `${((Number(d[valueKey]) || 0) / max) * 100}%`, background: accent, height: '100%', borderRadius: '2px' }} />
+          </div>
+          <span className="dim" style={{ width: '34px', fontSize: '0.65rem' }}>{d[valueKey]}</span>
+        </div>
+      ))}
+      {(!data || data.length === 0) && <div className="dim" style={{ fontSize: '0.75rem' }}>No data yet.</div>}
+    </div>
+  );
+}
+
 export default function DiscordAdmin() {
   const [tab, setTab] = useState('dashboard');
   const [status, setStatus] = useState(null);
@@ -52,6 +71,17 @@ export default function DiscordAdmin() {
   const [annForm, setAnnForm] = useState({ title: '', content: '', channel_id: '', embed_color: '#3498db', image_url: '', scheduled_at: '' });
   const [annStatus, setAnnStatus] = useState('');
   const [assignId, setAssignId] = useState('');
+  // C2 additions
+  const [ticketAnalytics, setTicketAnalytics] = useState(null);
+  const [modCases, setModCases] = useState(null);
+  const [automodRules, setAutomodRules] = useState([]);
+  const [appeals, setAppeals] = useState([]);
+  const [allowlist, setAllowlist] = useState([]);
+  const [modFilterUser, setModFilterUser] = useState('');
+  const [appealResolution, setAppealResolution] = useState({});
+  const [allowlistForm, setAllowlistForm] = useState({ provider: 'github', identifier: '', display: '' });
+  const [automodSaving, setAutomodSaving] = useState('');
+  const [allowlistStatus, setAllowlistStatus] = useState('');
 
   const fetchApi = async (path, opts = {}) => {
     const resp = await fetch(`${API}${path}`, { headers: HEADERS, credentials: 'include', ...opts });
@@ -79,6 +109,67 @@ export default function DiscordAdmin() {
   const loadTickets = (filter) => {
     setTicketFilter(filter);
     fetchApi(`/tickets?status=${filter}`).then(setTickets).catch(() => {});
+  };
+
+  const loadC2 = () => {
+    Promise.all([
+      fetchApi('/analytics/tickets').catch(() => null),
+      fetchApi('/moderation-cases').catch(() => null),
+      fetchApi('/automod-config').catch(() => null),
+      fetchApi('/appeals').catch(() => null),
+      fetchApi('/staff-allowlist').catch(() => null),
+    ]).then(([ta, mc, ar, ap, al]) => {
+      setTicketAnalytics(ta); setModCases(mc); setAutomodRules(ar?.rules || []); setAppeals(ap?.appeals || []); setAllowlist(al?.entries || []);
+    }).catch(() => {});
+  };
+
+  useEffect(() => { loadAll(); loadC2(); }, []);
+
+  const handleAutomodSave = async (rule) => {
+    setAutomodSaving(rule.rule_key);
+    try {
+      await fetchApi(`/automod-config/${rule.rule_key}`, { method: 'PUT', body: JSON.stringify(rule) });
+      loadC2();
+    } catch (e) { alert(`Automod save failed: ${e.message}`); }
+    finally { setAutomodSaving(''); }
+  };
+
+  const handleAppealReview = async (appealId, decision) => {
+    const resolution = (appealResolution[appealId] || '').trim();
+    if (decision === 'approved' && !resolution) {
+      alert('Please enter a resolution note before approving.');
+      return;
+    }
+    try {
+      await fetchApi(`/appeals/${appealId}/review`, { method: 'POST', body: JSON.stringify({ decision, resolution }) });
+      loadC2();
+    } catch (e) { alert(`Review failed: ${e.message}`); }
+  };
+
+  const handleAllowlistAdd = async (e) => {
+    e.preventDefault();
+    if (!allowlistForm.identifier.trim()) return;
+    try {
+      await fetchApi('/staff-allowlist', { method: 'POST', body: JSON.stringify(allowlistForm) });
+      setAllowlistForm({ provider: 'github', identifier: '', display: '' });
+      setAllowlistStatus('Added.');
+      loadC2();
+    } catch (e) { setAllowlistStatus(`Error: ${e.message}`); }
+  };
+
+  const handleAllowlistRemove = async (provider, identifier) => {
+    if (!confirm(`Remove ${provider}: ${identifier} from the allowlist?`)) return;
+    try {
+      await fetchApi('/staff-allowlist', { method: 'DELETE', body: JSON.stringify({ provider, identifier }) });
+      setAllowlistStatus('Removed.');
+      loadC2();
+    } catch (e) { setAllowlistStatus(`Error: ${e.message}`); }
+  };
+
+  const loadModCases = (userId) => {
+    setModFilterUser(userId || '');
+    const q = userId ? `?user_id=${userId}` : '';
+    fetchApi(`/moderation-cases${q}`).then(setModCases).catch(() => {});
   };
 
   const handleAnnounce = async (e) => {
@@ -129,6 +220,10 @@ export default function DiscordAdmin() {
     { key: 'tickets', label: 'TICKETS' },
     { key: 'announcements', label: 'ANNOUNCEMENTS' },
     { key: 'analytics', label: 'ANALYTICS' },
+    { key: 'moderation', label: 'MODERATION' },
+    { key: 'automod', label: 'AUTOMOD' },
+    { key: 'appeals', label: 'APPEALS' },
+    { key: 'allowlist', label: 'ALLOWLIST' },
   ];
 
   if (loading) return <div className="loading-state">Connecting to Discord bot database...</div>;
@@ -341,6 +436,211 @@ export default function DiscordAdmin() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+
+          <div className="grid-2">
+            <div className="card">
+              <div className="card-head">BOT ACTIVITY (30d)</div>
+              <SimpleBarChart data={analytics.command_timeline} labelKey="day" valueKey="count" />
+            </div>
+            <div className="card">
+              <div className="card-head">TICKET VOLUME (14d)</div>
+              <SimpleBarChart data={ticketAnalytics?.volume_by_day} labelKey="day" valueKey="count" accent="var(--amber)" />
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                <div className="dim" style={{ fontSize: '0.7rem' }}>Avg claim: <b style={{ color: 'var(--text)' }}>{ticketAnalytics?.avg_time_to_claim_minutes ?? '—'} min</b></div>
+                <div className="dim" style={{ fontSize: '0.7rem' }}>Avg close: <b style={{ color: 'var(--text)' }}>{ticketAnalytics?.avg_time_to_close_minutes ?? '—'} min</b></div>
+                <div className="dim" style={{ fontSize: '0.7rem' }}>Closed w/ reason: <b style={{ color: 'var(--text)' }}>{ticketAnalytics?.closed_with_reason ?? 0}</b></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card mt-2">
+            <div className="card-head">TICKET VOLUME BY PRIORITY</div>
+            <SimpleBarChart
+              data={Object.entries(ticketAnalytics?.volume_by_priority || {}).map(([p, c]) => ({ priority: p, count: c }))}
+              labelKey="priority" valueKey="count" accent="var(--green)"
+            />
+          </div>
+        </>
+      )}
+
+      {/* ================================================================ */}
+      {/* MODERATION */}
+      {/* ================================================================ */}
+      {tab === 'moderation' && (
+        <>
+          <div className="card mb-2">
+            <div className="card-head">MODERATION CASE HISTORY</div>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <input
+                className="input"
+                placeholder="Filter by Discord user ID"
+                value={modFilterUser}
+                onChange={(e) => setModFilterUser(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') loadModCases(modFilterUser.trim()); }}
+                style={{ width: '220px', fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+              />
+              <button className="btn btn-sm" onClick={() => loadModCases(modFilterUser.trim())}>Apply</button>
+              {modFilterUser && <button className="btn btn-sm" onClick={() => loadModCases('')}>Clear</button>}
+              <span className="dim" style={{ alignSelf: 'center', fontSize: '0.7rem', marginLeft: 'auto' }}>{modCases?.total ?? 0} cases</span>
+            </div>
+            <div style={{ maxHeight: '480px', overflowY: 'auto' }}>
+              {(modCases?.cases || []).map((c) => (
+                <div key={c.id} style={{ padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: '0.75rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span className="mono-dim">#{c.id}</span>
+                    <span style={{ color: 'var(--acc)' }}>{c.action_type}</span>
+                    <span className="dim">user: {c.user_id}</span>
+                    <span className="dim">mod: {c.moderator_id}</span>
+                    <span className={`badge badge-${c.active ? 'warn' : 'dim'}`}>{c.active ? 'ACTIVE' : 'RESOLVED'}</span>
+                    <span className="dim" style={{ marginLeft: 'auto' }}>{c.created_at?.slice(0, 19)}</span>
+                  </div>
+                  <div className="dim" style={{ fontSize: '0.7rem', marginTop: '0.2rem' }}>{c.reason || '(no reason)'}{c.expires_at ? ` · expires ${c.expires_at.slice(0, 16)}` : ''}</div>
+                </div>
+              ))}
+              {(!modCases?.cases || modCases.cases.length === 0) && <div className="dim" style={{ padding: '0.5rem 0', fontSize: '0.75rem' }}>No moderation cases recorded.</div>}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ================================================================ */}
+      {/* AUTOMOD */}
+      {/* ================================================================ */}
+      {tab === 'automod' && (
+        <div className="card">
+          <div className="card-head">AUTOMOD RULES</div>
+          <p className="dim" style={{ fontSize: '0.75rem', marginBottom: '0.75rem' }}>
+            Rules are stored in the bot database (automod_config) and read live by the bot. Enabled rules with a 'warn' action log a case to the mod log; 'timeout' applies a 15-minute timeout; 'delete' removes the message.
+          </p>
+          {(automodRules || []).map((rule) => (
+            <div key={rule.rule_key} style={{ padding: '0.75rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="mono-dim" style={{ minWidth: '170px', color: 'var(--acc)' }}>{rule.rule_key}</span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem' }}>
+                <input
+                  type="checkbox"
+                  checked={!!rule.enabled}
+                  onChange={(e) => handleAutomodSave({ ...rule, enabled: e.target.checked })}
+                  disabled={automodSaving === rule.rule_key}
+                />
+                Enabled
+              </label>
+              <select
+                className="input"
+                value={rule.action || 'warn'}
+                onChange={(e) => handleAutomodSave({ ...rule, action: e.target.value })}
+                disabled={automodSaving === rule.rule_key}
+                style={{ width: '110px', fontSize: '0.7rem', padding: '0.2rem 0.4rem' }}
+              >
+                <option value="warn">warn</option>
+                <option value="timeout">timeout</option>
+                <option value="delete">delete</option>
+                <option value="log">log</option>
+              </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.7rem' }} className="dim">
+                Threshold:
+                <input
+                  className="input"
+                  type="number"
+                  step="0.1"
+                  value={rule.threshold ?? ''}
+                  onChange={(e) => handleAutomodSave({ ...rule, threshold: e.target.value === '' ? null : Number(e.target.value) })}
+                  disabled={automodSaving === rule.rule_key}
+                  style={{ width: '70px', fontSize: '0.7rem', padding: '0.2rem 0.4rem' }}
+                />
+              </div>
+              {automodSaving === rule.rule_key && <span className="dim" style={{ fontSize: '0.65rem' }}>saving…</span>}
+            </div>
+          ))}
+          {(automodRules || []).length === 0 && (
+            <div className="dim" style={{ padding: '0.5rem 0', fontSize: '0.75rem' }}>
+              No rules found. Rules are created when the bot first triggers an automod check; defaults are: spam (5/5s), excessive_mentions (8), excessive_caps (0.7).
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ================================================================ */}
+      {/* APPEALS */}
+      {/* ================================================================ */}
+      {tab === 'appeals' && (
+        <>
+          <div className="card mb-2">
+            <div className="card-head">APPEAL REVIEW QUEUE ({appeals.length})</div>
+            <p className="dim" style={{ fontSize: '0.75rem', marginBottom: '0.75rem' }}>
+              Approving an appeal enqueues a moderation_reverse action that the bot dispatcher picks up to unban / clear the timeout on Discord.
+            </p>
+            <div style={{ maxHeight: '480px', overflowY: 'auto' }}>
+              {(appeals || []).map((a) => (
+                <div key={a.id} style={{ padding: '0.7rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: '0.78rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span className="mono-dim">#{a.id}</span>
+                    <span>{a.username || a.user_id || 'unknown'}</span>
+                    {a.action_type && <span className="badge">{a.action_type}</span>}
+                    <span className={`badge badge-${a.status === 'pending' ? 'warn' : a.status === 'approved' ? 'ok' : 'err'}`}>{a.status}</span>
+                    <span className="dim" style={{ marginLeft: 'auto' }}>{a.created_at?.slice(0, 19)}</span>
+                  </div>
+                  <div className="dim" style={{ fontSize: '0.72rem', marginTop: '0.3rem' }}>{a.statement}</div>
+                  {a.status === 'pending' ? (
+                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input
+                        className="input"
+                        placeholder="Resolution note (required to approve)"
+                        value={appealResolution[a.id] || ''}
+                        onChange={(e) => setAppealResolution({ ...appealResolution, [a.id]: e.target.value })}
+                        style={{ flex: 1, minWidth: '200px', fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}
+                      />
+                      <button className="btn btn-sm" style={{ color: 'var(--green)' }} onClick={() => handleAppealReview(a.id, 'approved')}>Approve</button>
+                      <button className="btn btn-sm" style={{ color: 'var(--red)' }} onClick={() => handleAppealReview(a.id, 'denied')}>Deny</button>
+                    </div>
+                  ) : (
+                    <div className="dim" style={{ fontSize: '0.7rem', marginTop: '0.3rem' }}>
+                      Reviewed {a.reviewed_at?.slice(0, 19)}{a.resolution ? ` — ${a.resolution}` : ''}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {(appeals || []).length === 0 && <div className="dim" style={{ padding: '0.5rem 0', fontSize: '0.75rem' }}>No appeals submitted.</div>}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ================================================================ */}
+      {/* ALLOWLIST */}
+      {/* ================================================================ */}
+      {tab === 'allowlist' && (
+        <>
+          <div className="card mb-2">
+            <div className="card-head">STAFF ALLOWLIST</div>
+            <p className="dim" style={{ fontSize: '0.75rem', marginBottom: '0.75rem' }}>
+              This is the source of truth checked by auth at login time (GitHub usernames and Discord user IDs).
+            </p>
+            <form onSubmit={handleAllowlistAdd} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <select className="input" value={allowlistForm.provider} onChange={(e) => setAllowlistForm({ ...allowlistForm, provider: e.target.value })} style={{ width: '110px', fontSize: '0.75rem', padding: '0.3rem 0.5rem' }}>
+                <option value="github">github</option>
+                <option value="discord">discord</option>
+              </select>
+              <input className="input" placeholder={allowlistForm.provider === 'github' ? 'GitHub username' : 'Discord user ID'} value={allowlistForm.identifier} onChange={(e) => setAllowlistForm({ ...allowlistForm, identifier: e.target.value })} style={{ width: '220px', fontSize: '0.75rem', padding: '0.3rem 0.5rem' }} required />
+              <input className="input" placeholder="Display name (optional)" value={allowlistForm.display} onChange={(e) => setAllowlistForm({ ...allowlistForm, display: e.target.value })} style={{ width: '180px', fontSize: '0.75rem', padding: '0.3rem 0.5rem' }} />
+              <button className="btn btn-sm btn-primary" type="submit">Add</button>
+              {allowlistStatus && <span className="dim" style={{ fontSize: '0.7rem' }}>{allowlistStatus}</span>}
+            </form>
+          </div>
+          <div className="card">
+            <div className="card-head">CURRENT ENTRIES ({allowlist.length})</div>
+            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              {(allowlist || []).map((e) => (
+                <div key={`${e.provider}-${e.identifier}`} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: '0.75rem' }}>
+                  <span className={`badge badge-${e.provider === 'github' ? 'stable' : 'warn'}`}>{e.provider}</span>
+                  <span className="mono-dim">{e.identifier}</span>
+                  {e.display && <span className="dim">({e.display})</span>}
+                  <span className="dim" style={{ marginLeft: 'auto' }}>{e.added_at?.slice(0, 19)}</span>
+                  <button className="btn btn-sm" style={{ color: 'var(--red)' }} onClick={() => handleAllowlistRemove(e.provider, e.identifier)}>Remove</button>
+                </div>
+              ))}
+              {(allowlist || []).length === 0 && <div className="dim" style={{ padding: '0.5rem 0', fontSize: '0.75rem' }}>Allowlist is empty — env vars (APPROVED_GITHUB_USERS / APPROVED_DISCORD_USERS) seed it on first boot.</div>}
             </div>
           </div>
         </>

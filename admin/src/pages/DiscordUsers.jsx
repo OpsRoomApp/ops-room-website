@@ -33,8 +33,11 @@ export default function DiscordUsers() {
   const viewProfile = async (discordId) => {
     setLoading(true);
     try {
-      const data = await fetchApi(`/users/${discordId}`);
-      setProfile(data);
+      const [data, modData] = await Promise.all([
+        fetchApi(`/users/${discordId}`),
+        fetchApi(`/moderation-cases?user_id=${discordId}`).catch(() => null),
+      ]);
+      setProfile({ ...data, moderation_cases: modData?.cases || [] });
     } catch (e) {
       setError(`Profile load failed: ${e.message}`);
     } finally {
@@ -132,6 +135,19 @@ export default function DiscordUsers() {
                   <div className="dim">Recent Tickets</div>
                   {profile.recent_tickets.map((t) => (
                     <div key={t.id} style={{ fontSize: '0.7rem' }} className="mono-dim">#{t.id} {t.subject} [{t.status}]</div>
+                  ))}
+                </div>
+              )}
+              {profile.moderation_cases?.length > 0 && (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <div className="dim" style={{ marginBottom: '0.25rem' }}>Moderation History ({profile.moderation_cases.length})</div>
+                  {profile.moderation_cases.map((c) => (
+                    <div key={c.id} style={{ fontSize: '0.7rem', padding: '0.25rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <span className="mono-dim" style={{ color: 'var(--acc)' }}>{c.action_type}</span>
+                      <span className="dim"> · {c.created_at?.slice(0, 16)}</span>
+                      {c.active ? <span className="badge badge-warn" style={{ marginLeft: '0.4rem' }}>ACTIVE</span> : null}
+                      <div className="dim" style={{ fontSize: '0.65rem' }}>{c.reason || ''}</div>
+                    </div>
                   ))}
                 </div>
               )}

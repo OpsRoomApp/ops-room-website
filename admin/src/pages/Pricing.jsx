@@ -68,7 +68,7 @@ export default function Pricing() {
             <tr><td colSpan="5" className="empty-state">No pricing tiers defined. Add one to get started.</td></tr>
           )}
           {tiers.map((t) => (
-            <tr key={t.id}>
+            <tr key={t.id} style={{ transition: 'background 0.12s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,188,212,0.04)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
               <td className="mono-dim" style={{ fontSize: '0.8rem', color: 'var(--text)' }}>{t.name}</td>
               <td><span className={`badge badge-${t.type === 'subscription' ? 'warn' : 'stable'}`}>{t.type}</span></td>
               <td className="mono-dim">{t.price}</td>

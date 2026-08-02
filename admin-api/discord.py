@@ -22,6 +22,7 @@ from typing import Iterator
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from auth import verify_session
+import allowlist
 
 _log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/discord", tags=["discord"])
@@ -876,3 +877,281 @@ async def audit_log_types(_session: dict = Depends(verify_session)):
         ).fetchall()
 
     return [{"event_type": r["event_type"], "count": r["cnt"]} for r in rows]
+
+
+# ===================================================================
+# GET /api/discord/analytics/tickets  (C2 -- volume + response-time analytics)
+# ===================================================================
+
+
+@router.get("/analytics/tickets")
+async def ticket_analytics(_session: dict = Depends(verify_session)):
+    """Ticket volume + response-time analytics computed from the tickets table.
+
+    Averages are computed in Python from ISO timestamps so the admin API
+    does not depend on SQLite's datetime() quirks with timezone offsets.
+    """
+    from datetime import datetime
+
+    def _parse_iso(value: str | None) -> datetime | None:
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    with _db_session() as conn:
+        rows = conn.execute(
+            "SELECT id, priority, status, created_at, assigned_to, closed_at "
+            "FROM tickets ORDER BY created_at"
+        ).fetchall()
+
+    volume_by_day: dict[str, int] = {}
+    volume_by_priority: dict[str, int] = {}
+    claim_seconds: list[float] = []
+    close_seconds: list[float] = []
+    closed_with_reason = 0
+
+    for r in rows:
+        created = _parse_iso(r["created_at"])
+        if created:
+            day = created.date().isoformat()
+            volume_by_day[day] = volume_by_day.get(day, 0) + 1
+        priority = r["priority"] or "Normal"
+        volume_by_priority[priority] = volume_by_priority.get(priority, 0) + 1
+
+        closed_at = _parse_iso(r["closed_at"])
+        if created and closed_at:
+            close_seconds.append((closed_at - created).total_seconds())
+        if r["status"] == "closed":
+            closed_with_reason += 1
+
+    # Time-to-claim: approximated as created -> first assignment update.
+    # The bot updates updated_at on assign; use assigned_to presence as a
+    # proxy for claimed tickets and their created->updated delta.
+    with _db_session() as conn:
+        claim_rows = conn.execute(
+            "SELECT created_at, updated_at FROM tickets WHERE assigned_to IS NOT NULL"
+        ).fetchall()
+    for r in claim_rows:
+        created = _parse_iso(r["created_at"])
+        updated = _parse_iso(r["updated_at"])
+        if created and updated:
+            claim_seconds.append((updated - created).total_seconds())
+
+    def _avg(values: list[float]) -> float | None:
+        return round(sum(values) / len(values), 1) if values else None
+
+    # Last 14 days of volume, oldest first.
+    days = sorted(volume_by_day.keys())[-14:]
+    volume_series = [{"day": d, "count": volume_by_day.get(d, 0)} for d in days]
+
+    return {
+        "total": len(rows),
+        "volume_by_day": volume_series,
+        "volume_by_priority": volume_by_priority,
+        "avg_time_to_claim_minutes": round(_avg(claim_seconds) / 60, 1) if claim_seconds else None,
+        "avg_time_to_close_minutes": round(_avg(close_seconds) / 60, 1) if close_seconds else None,
+        "closed_with_reason": closed_with_reason,
+    }
+
+
+# ===================================================================
+# GET /api/discord/moderation-cases  (C2 -- per-user + global feed)
+# ===================================================================
+
+
+@router.get("/moderation-cases")
+async def moderation_cases(
+    _session: dict = Depends(verify_session),
+    user_id: int = Query(0),
+    action_type: str = Query("", max_length=30),
+    limit: int = Query(100, ge=1, le=300),
+):
+    with _db_session() as conn:
+        conditions: list[str] = []
+        params: list = []
+        if user_id:
+            conditions.append("user_id = ?")
+            params.append(user_id)
+        if action_type:
+            conditions.append("action_type = ?")
+            params.append(action_type)
+        where = " AND ".join(conditions) if conditions else "1=1"
+        rows = conn.execute(
+            f"SELECT * FROM moderation_cases WHERE {where} ORDER BY created_at DESC LIMIT ?",
+            params + [limit],
+        ).fetchall()
+    return {
+        "cases": [dict(r) for r in rows],
+        "total": len(rows),
+    }
+
+
+# ===================================================================
+# GET/PUT /api/discord/automod-config  (C2 -- automod rules CRUD)
+# ===================================================================
+
+
+@router.get("/automod-config")
+async def get_automod_config(_session: dict = Depends(verify_session)):
+    with _db_session() as conn:
+        rows = conn.execute(
+            "SELECT rule_key, enabled, action, threshold, config_json, updated_at "
+            "FROM automod_config ORDER BY rule_key"
+        ).fetchall()
+    return {"rules": [dict(r) for r in rows]}
+
+
+@router.put("/automod-config/{rule_key}")
+async def update_automod_config(
+    rule_key: str,
+    request: Request,
+    _session: dict = Depends(verify_session),
+):
+    body = await request.json()
+    enabled = int(bool(body.get("enabled", True)))
+    action = str(body.get("action", "warn")).strip()
+    threshold = body.get("threshold")
+    config_json = body.get("config_json")
+    if action not in ("warn", "timeout", "delete", "log"):
+        raise HTTPException(status_code=400, detail="action must be warn, timeout, delete, or log")
+
+    with _db_session() as conn:
+        conn.execute(
+            """
+            INSERT INTO automod_config (rule_key, enabled, action, threshold, config_json, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(rule_key) DO UPDATE SET
+                enabled=excluded.enabled, action=excluded.action,
+                threshold=excluded.threshold, config_json=excluded.config_json,
+                updated_at=excluded.updated_at
+            """,
+            (rule_key, enabled, action, threshold, config_json, _now_iso()),
+        )
+    return {"ok": True, "rule_key": rule_key}
+
+
+# ===================================================================
+# GET /api/discord/appeals  +  POST /api/discord/appeals/{id}/review
+# (C2 -- appeal review queue; approve reverses the action via pending_actions)
+# ===================================================================
+
+
+@router.get("/appeals")
+async def list_appeals(
+    _session: dict = Depends(verify_session),
+    status: str = Query("", max_length=20),
+):
+    with _db_session() as conn:
+        if status:
+            rows = conn.execute(
+                "SELECT * FROM appeals WHERE status = ? ORDER BY created_at DESC LIMIT 200",
+                (status,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM appeals ORDER BY created_at DESC LIMIT 200"
+            ).fetchall()
+    return {"appeals": [dict(r) for r in rows], "total": len(rows)}
+
+
+@router.post("/appeals/{appeal_id}/review")
+async def review_appeal(
+    appeal_id: int,
+    request: Request,
+    _session: dict = Depends(verify_session),
+):
+    """Approve or deny an appeal.
+
+    Approval must have a real-world effect: a `moderation_reverse` pending
+    action is enqueued for the bot dispatcher, which performs the unban or
+    removes the timeout. Denial just updates the appeal row.
+    """
+    body = await request.json()
+    decision = str(body.get("decision", "")).strip().lower()
+    resolution = str(body.get("resolution", "")).strip()
+    if decision not in ("approved", "denied"):
+        raise HTTPException(status_code=400, detail="decision must be 'approved' or 'denied'")
+
+    with _db_session() as conn:
+        row = conn.execute("SELECT * FROM appeals WHERE id = ?", (appeal_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Appeal not found")
+        if row["status"] != "pending":
+            raise HTTPException(status_code=409, detail="Appeal already reviewed")
+
+        conn.execute(
+            "UPDATE appeals SET status=?, reviewed_by=?, reviewed_at=?, resolution=? WHERE id=?",
+            (decision, int(_session.get("discord_id") or _session.get("sub", "unknown")), _now_iso(), resolution, appeal_id),
+        )
+
+        if decision == "approved" and row["user_id"]:
+            # Enqueue a moderation_reverse action for the bot dispatcher.
+            _validate_pending_schema(conn)
+            reverse_action = str(row["action_type"] or "ban").lower()
+            conn.execute(
+                """
+                INSERT INTO pending_actions (action_type, payload_json, status, created_at)
+                VALUES ('moderation_reverse', ?, 'pending', ?)
+                """,
+                (
+                    json.dumps({
+                        "discord_id": row["user_id"],
+                        "reverse_action": reverse_action,
+                        "appeal_id": appeal_id,
+                        "resolution": resolution,
+                    }),
+                    _now_iso(),
+                ),
+            )
+
+    return {"ok": True, "appeal_id": appeal_id, "decision": decision}
+
+
+# ===================================================================
+# Staff allowlist management (C2.7 -- source of truth is staff_allowlist table)
+# ===================================================================
+
+
+@router.get("/staff-allowlist")
+async def get_staff_allowlist(
+    _session: dict = Depends(verify_session),
+    provider: str = Query("", max_length=20),
+):
+    return {"entries": allowlist.list_allowlist(provider)}
+
+
+@router.post("/staff-allowlist")
+async def add_staff_allowlist(
+    request: Request,
+    _session: dict = Depends(verify_session),
+):
+    body = await request.json()
+    provider = str(body.get("provider", "")).strip().lower()
+    identifier = str(body.get("identifier", "")).strip()
+    display = str(body.get("display", "")).strip() or None
+    if provider not in ("github", "discord"):
+        raise HTTPException(status_code=400, detail="provider must be 'github' or 'discord'")
+    if not identifier:
+        raise HTTPException(status_code=400, detail="identifier is required")
+    try:
+        result = allowlist.add_entry(provider, identifier, display, added_by=int(_session.get("discord_id") or 0) or None)
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return result
+
+
+@router.delete("/staff-allowlist")
+async def remove_staff_allowlist(
+    request: Request,
+    _session: dict = Depends(verify_session),
+):
+    body = await request.json()
+    provider = str(body.get("provider", "")).strip().lower()
+    identifier = str(body.get("identifier", "")).strip()
+    if provider not in ("github", "discord") or not identifier:
+        raise HTTPException(status_code=400, detail="provider and identifier are required")
+    removed = allowlist.remove_entry(provider, identifier)
+    return {"ok": removed}

@@ -133,7 +133,7 @@ export default function Licensing() {
             <tr><td colSpan="8" className="empty-state">No licenses generated yet. Use the form above to create license keys.</td></tr>
           )}
           {licenses.map((l) => (
-            <tr key={l.key}>
+            <tr key={l.key} style={{ transition: 'background 0.12s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,188,212,0.04)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
               <td className="mono-dim" style={{ fontSize: '0.75rem' }}>{l.key}</td>
               <td><span className="badge badge-stable">{l.tier || 'standard'}</span></td>
               <td>

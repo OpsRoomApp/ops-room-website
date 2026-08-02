@@ -41,6 +41,32 @@ export default function DiscordAudit() {
 
   useEffect(() => { loadLogs(); }, []); // eslint-disable-line
 
+  const exportCsv = () => {
+    if (!logs?.events?.length) {
+      alert('No events to export.');
+      return;
+    }
+    const header = ['id', 'event_type', 'user_id', 'username', 'guild_id', 'channel_id', 'detail', 'created_at'];
+    const esc = (v) => {
+      const s = String(v ?? '');
+      return /[,"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows = [header.join(',')];
+    logs.events.forEach((ev) => {
+      rows.push(header.map((h) => esc(ev[h])).join(','));
+    });
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `opsroom-audit-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const getTypeColor = (type) => {
     if (type === 'command' || type === 'ofp') return 'var(--acc)';
     if (type === 'join' || type === 'welcome') return 'var(--green)';
@@ -81,6 +107,7 @@ export default function DiscordAudit() {
             <input className="input" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ fontSize: '0.8rem' }} />
           </div>
           <button className="btn btn-primary" onClick={() => loadLogs(0)} disabled={loading}>Filter</button>
+          <button className="btn" onClick={exportCsv} disabled={!logs?.events?.length} style={{ marginLeft: '0.25rem' }}>Export CSV</button>
         </div>
       </div>
 

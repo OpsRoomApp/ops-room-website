@@ -19,8 +19,11 @@ import httpx
 import jwt
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
+import allowlist
 from config import (
-    APPROVED_USERS,
+    DISCORD_CLIENT_ID,
+    DISCORD_CLIENT_SECRET,
+    DISCORD_REDIRECT_URI,
     GITHUB_CLIENT_ID,
     GITHUB_CLIENT_SECRET,
     GITHUB_REDIRECT_URI,
@@ -104,9 +107,17 @@ def verify_session(request: Request) -> dict[str, Any]:
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid session")
 
-    username = str(payload.get("sub") or "").lower()
-    if username not in APPROVED_USERS:
-        raise HTTPException(status_code=403, detail="Not authorised")
+    sub = str(payload.get("sub") or "")
+    if sub.startswith("discord:"):
+        # Discord session: sub is "discord:{username}"; the JWT carries the
+        # Discord user ID in the custom "discord_id" claim (set at login).
+        discord_id = str(payload.get("discord_id") or "")
+        if not allowlist.is_allowed("discord", discord_id):
+            raise HTTPException(status_code=403, detail="Not authorised")
+    else:
+        username = sub.lower()
+        if not allowlist.is_allowed("github", username):
+            raise HTTPException(status_code=403, detail="Not authorised")
 
     return payload
 
@@ -218,7 +229,7 @@ async def callback(request: Request, code: str = "", state: str = ""):
         raise HTTPException(status_code=502, detail="GitHub API unavailable")
 
     github_username = str(user_data.get("login") or "").lower()
-    if github_username not in APPROVED_USERS:
+    if not allowlist.is_allowed("github", github_username):
         _log.warning("Unauthorised GitHub user attempted login: %s", github_username)
         _audit_log({"action": "LOGIN_FAILED", "user": github_username, "reason": "not_in_approved_list"})
         raise HTTPException(status_code=403, detail="Your GitHub account is not authorised for this admin panel.")
@@ -228,6 +239,109 @@ async def callback(request: Request, code: str = "", state: str = ""):
 
     _log.info("Admin login: %s", github_username)
     _audit_log({"action": "LOGIN_SUCCESS", "user": github_username})
+
+    response = RedirectResponse("/", status_code=302)
+    response.set_cookie(SESSION_COOKIE, jwt_token, **COOKIE_KWARGS)
+    response.delete_cookie(STATE_COOKIE, path="/api/auth")
+    return response
+
+# ---------------------------------------------------------------------------
+# Discord OAuth (v0.25.55 / C3) -- mirror of GitHub OAuth, both work side-by-side
+# ---------------------------------------------------------------------------
+
+@router.get("/discord/login")
+async def discord_login(request: Request):
+    """Redirect the user to Discord for authorisation."""
+    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    ip = ip.split(",")[0].strip()
+    if not _rate_limit(f"login:{ip}", RATE_LIMIT_LOGIN_PER_MIN):
+        raise HTTPException(status_code=429, detail="Too many login attempts.")
+
+    if not DISCORD_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Discord OAuth not configured")
+
+    state = _make_state()
+    params = {
+        "client_id": DISCORD_CLIENT_ID,
+        "redirect_uri": DISCORD_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "identify",
+        "state": state,
+    }
+    qs = "&".join(f"{k}={v}" for k, v in params.items())
+
+    response = RedirectResponse(f"https://discord.com/api/oauth2/authorize?{qs}")
+    response.set_cookie(STATE_COOKIE, state, httponly=True, secure=True, samesite="lax", path="/api/auth", max_age=600)
+    return response
+
+
+@router.get("/discord/callback")
+async def discord_callback(request: Request, code: str = "", state: str = ""):
+    """Discord redirects here after the user authorises the app."""
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing authorisation code")
+
+    stored_state = request.cookies.get(STATE_COOKIE)
+    if not stored_state or not secrets.compare_digest(stored_state, state):
+        raise HTTPException(status_code=400, detail="Invalid state parameter.")
+
+    if not DISCORD_CLIENT_SECRET:
+        raise HTTPException(status_code=500, detail="Discord OAuth not configured")
+
+    # Exchange code for access token
+    try:
+        async with httpx.AsyncClient() as client:
+            token_resp = await client.post(
+                "https://discord.com/api/oauth2/token",
+                data={
+                    "client_id": DISCORD_CLIENT_ID,
+                    "client_secret": DISCORD_CLIENT_SECRET,
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": DISCORD_REDIRECT_URI,
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=15,
+            )
+            token_data = token_resp.json()
+    except Exception as exc:
+        _log.error("Discord token exchange error: %s", exc)
+        raise HTTPException(status_code=502, detail="Discord authentication unavailable")
+
+    access_token = token_data.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Discord authentication failed")
+
+    # Fetch Discord user info
+    try:
+        async with httpx.AsyncClient() as client:
+            user_resp = await client.get(
+                "https://discord.com/api/users/@me",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=15,
+            )
+            user_data = user_resp.json()
+    except Exception as exc:
+        _log.error("Discord user fetch error: %s", exc)
+        raise HTTPException(status_code=502, detail="Discord API unavailable")
+
+    discord_id = str(user_data.get("id") or "")
+    discord_username = str(user_data.get("username") or "")
+
+    if not allowlist.is_allowed("discord", discord_id):
+        _log.warning("Unauthorised Discord user: %s", discord_id)
+        raise HTTPException(status_code=403, detail="Your Discord account is not authorised.")
+
+    avatar_hash = user_data.get("avatar") or ""
+    avatar_url = f"https://cdn.discordapp.com/avatars/{discord_id}/{avatar_hash}.png" if avatar_hash else ""
+
+    jwt_token = _create_token(f"discord:{discord_username}", avatar_url)
+    jwt_payload = jwt.decode(
+        jwt_token, JWT_SECRET, algorithms=[JWT_ALGORITHM]
+    )
+    jwt_payload["discord_id"] = discord_id
+    jwt_token = jwt.encode(jwt_payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    _log.info("Admin login (Discord): %s", discord_username)
 
     response = RedirectResponse("/", status_code=302)
     response.set_cookie(SESSION_COOKIE, jwt_token, **COOKIE_KWARGS)
