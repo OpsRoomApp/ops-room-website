@@ -20,6 +20,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from auth import verify_session
+from clientip import client_ip
 from config import ANALYTICS_DB_PATH, ANALYTICS_RETENTION_DAYS, ANALYTICS_SALT
 
 _log = logging.getLogger(__name__)
@@ -134,9 +135,7 @@ async def record_download(request: Request):
 
     version = str(body.get("version") or "unknown")
     user_agent = request.headers.get("user-agent", "")
-    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
-    # Take the first IP if there's a chain
-    ip = ip.split(",")[0].strip()
+    ip = client_ip(request)
 
     _record_download(ip, version, user_agent)
     return {"ok": True}

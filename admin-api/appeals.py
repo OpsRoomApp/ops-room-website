@@ -18,6 +18,7 @@ import os
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
+from clientip import client_ip
 
 _log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/appeals", tags=["appeals"])
@@ -44,8 +45,7 @@ def _check_rate(ip: str) -> bool:
 @router.post("/submit")
 async def submit_appeal(request: Request):
     """Public appeal form submission. No auth required."""
-    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
-    ip = ip.split(",")[0].strip()
+    ip = client_ip(request)
 
     if not _check_rate(ip):
         raise HTTPException(status_code=429, detail="Too many appeals. Please try again later.")

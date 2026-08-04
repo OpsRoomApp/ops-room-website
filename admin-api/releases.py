@@ -28,6 +28,8 @@ from typing import Any
 import time as _time
 from collections import defaultdict
 
+from clientip import client_ip
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from auth import verify_session
 from config import (
@@ -321,8 +323,7 @@ async def upload_release(
     username = str(_session.get("sub") or "unknown")
 
     # Rate limit
-    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
-    ip = ip.split(",")[0].strip()
+    ip = client_ip(request)
     if not _rate_limit_upload(f"upload:{ip}"):
         raise HTTPException(status_code=429, detail="Too many uploads. Please wait a minute.")
 
@@ -515,8 +516,7 @@ async def publish_release(request: Request, _session: dict = Depends(verify_sess
     username = str(_session.get("sub") or "unknown")
 
     # Rate limit
-    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
-    ip = ip.split(",")[0].strip()
+    ip = client_ip(request)
     if not _rate_limit_upload(f"publish:{ip}"):
         raise HTTPException(status_code=429, detail="Too many publish attempts. Please wait a minute.")
 

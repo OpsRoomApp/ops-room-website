@@ -20,6 +20,7 @@ import jwt
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 import allowlist
+from clientip import client_ip
 from config import (
     DISCORD_CLIENT_ID,
     DISCORD_CLIENT_SECRET,
@@ -139,8 +140,7 @@ async def login(request: Request):
     verify the request was initiated by the same browser session.
     """
     # Rate limit
-    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
-    ip = ip.split(",")[0].strip()
+    ip = client_ip(request)
     if not _rate_limit(f"login:{ip}", RATE_LIMIT_LOGIN_PER_MIN):
         _log.warning("Rate limit hit for login from %s", ip[:20])
         raise HTTPException(status_code=429, detail="Too many login attempts. Please wait a minute and try again.")
@@ -252,8 +252,7 @@ async def callback(request: Request, code: str = "", state: str = ""):
 @router.get("/discord/login")
 async def discord_login(request: Request):
     """Redirect the user to Discord for authorisation."""
-    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
-    ip = ip.split(",")[0].strip()
+    ip = client_ip(request)
     if not _rate_limit(f"login:{ip}", RATE_LIMIT_LOGIN_PER_MIN):
         raise HTTPException(status_code=429, detail="Too many login attempts.")
 

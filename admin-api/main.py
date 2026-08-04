@@ -17,6 +17,7 @@ import audit
 import pricing
 import licenses
 import opensky
+import nms        # v0.25.60: FAA NMS-API NOTAM proxy
 import transcripts  # v0.25.55 (C1)
 import appeals     # v0.25.55 (C4)
 import discord
@@ -59,6 +60,7 @@ app.include_router(audit.router)
 app.include_router(pricing.router)
 app.include_router(licenses.router)
 app.include_router(opensky.router)
+app.include_router(nms.router)
 app.include_router(transcripts.router)
 app.include_router(appeals.router)
 app.include_router(discord.router)
