@@ -422,13 +422,22 @@ def _num(value: Any) -> float | None:
 def _extract_features(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """Locate the GeoJSON feature array inside the incremental response body,
     which may be shaped as data.geojson (list or {features: [...]}) or
-    data.features."""
+    data.features. Never raises: an unknown or empty shape (e.g. the FAA
+    "no changes" reply) yields an empty list so a tick can never crash on a
+    response it does not recognise."""
+    if not isinstance(payload, dict):
+        payload = {}
     data = payload.get("data") if isinstance(payload.get("data"), dict) else payload
+    if not isinstance(data, dict):
+        data = {}
     geojson = data.get("geojson")
     if geojson is None:
         geojson = data.get("features")
     if isinstance(geojson, dict):
         geojson = geojson.get("features") or geojson.get("items") or []
+    if not isinstance(geojson, list):
+        _log.warning("NMS incremental response had no feature list (keys: %s)", sorted(str(k) for k in payload.keys()))
+        return []
     return [item for item in geojson if isinstance(item, dict)]
 
 
