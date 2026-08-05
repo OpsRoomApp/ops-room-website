@@ -15,6 +15,7 @@ function StatCard({ label, value, sub, badge, accent }) {
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [notamSync, setNotamSync] = useState(null);
   const [error, setError] = useState('');
   const [publishing, setPublishing] = useState(false);
 
@@ -28,6 +29,15 @@ export default function Dashboard() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // v0.25.63: NOTAM ingest sync health -- independent of the release load so
+  // a not-yet-deployed NOTAM DB can never take down the dashboard.
+  useEffect(() => {
+    fetch('/api/v1/notams/sync/status', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
+      .then(setNotamSync)
+      .catch(() => setNotamSync(null));
+  }, []);
 
   const handlePublish = async () => {
     if (!confirm('Publish the draft release to production? This updates the live manifest for all OPS ROOM users.')) return;
@@ -188,6 +198,33 @@ export default function Dashboard() {
           )}
         </div>
       )}
+
+      {/* NOTAM ingest sync health (v0.25.63) */}
+      <div className="card mb-2">
+        <div className="card-head">NOTAM SYNC (FAA NMS INGEST)</div>
+        {notamSync ? (
+          <div className="grid-4" style={{ marginTop: '0.5rem' }}>
+            <StatCard label="ROWS" value={notamSync.rows ?? '-'} sub={`${notamSync.active ?? 0} active`} />
+            <StatCard
+              label="BULK PULL"
+              value={notamSync.last_bulk_pull_at ? <span className="badge badge-ok">OK</span> : <span className="badge badge-warn">PENDING</span>}
+              sub={notamSync.last_bulk_pull_at?.slice(0, 19) || 'first pull due on deploy'}
+            />
+            <StatCard
+              label="INCREMENTAL"
+              value={notamSync.last_incremental_pull_at ? <span className="badge badge-ok">OK</span> : <span className="badge badge-warn">PENDING</span>}
+              sub={notamSync.last_incremental_pull_at?.slice(0, 19) || '3-min cadence'}
+            />
+            <StatCard
+              label="SYNC ERROR"
+              value={notamSync.last_sync_error ? <span className="badge badge-err">ERROR</span> : <span className="badge badge-ok">NONE</span>}
+              sub={notamSync.last_sync_error ? String(notamSync.last_sync_error).slice(0, 60) : 'healthy'}
+            />
+          </div>
+        ) : (
+          <div className="dim" style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}>NOTAM sync status unavailable (database not deployed yet).</div>
+        )}
+      </div>
 
       {/* Manifest preview */}
       <details className="card">

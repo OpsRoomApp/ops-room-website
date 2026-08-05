@@ -53,6 +53,12 @@ services:
       # OpenAIP airspace proxy (map enrichment). Key lives only on this server.
       - OPENAIP_API_KEY=${OPENAIP_API_KEY:-}
       - OPENAIP_PROXY_TOKEN=${OPENAIP_PROXY_TOKEN:-}
+      # NOTAM ingest-to-DB pipeline (v0.25.63): dedicated SQLite store refreshed
+      # by 1 bulk pull / 24h + 1 incremental pull / 3 min; per-airport requests
+      # are served from SQL so FAA quota is constant regardless of userbase.
+      - NOTAMS_DB_PATH=/opt/opsroom-notams/notams.db
+      - NMS_INGEST_ENABLED=${NMS_INGEST_ENABLED:-1}
+      - NOTAM_CLASSIFICATION=${NOTAM_CLASSIFICATION:-}
       - ANALYTICS_SALT=${ANALYTICS_SALT:-${JWT_SECRET:-}}
       - OPSROOM_RELEASES_DIR=/opt/opsroom-releases
       - RATE_LIMIT_LOGIN_PER_MIN=${RATE_LIMIT_LOGIN_PER_MIN:-10}
@@ -74,6 +80,8 @@ services:
       # Hosted ticket transcript storage (B1/C1). Written by the admin-api
       # and served by the public transcript viewer via the nginx proxy.
       - /opt/opsroom-transcripts:/opt/opsroom-transcripts
+      # Dedicated NOTAM database (v0.25.63), separate from the bot DB.
+      - /opt/opsroom-notams:/opt/opsroom-notams
     networks:
       - opsroom-net
     healthcheck:

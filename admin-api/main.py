@@ -19,6 +19,8 @@ import licenses
 import opensky
 import nms        # v0.25.60: FAA NMS-API NOTAM proxy
 import openaip    # OpenAIP airspace proxy (map enrichment)
+import notams     # v0.25.63: DB-backed NOTAM serving endpoints
+import notam_ingest  # v0.25.63: NOTAM bulk + incremental ingestion jobs
 import transcripts  # v0.25.55 (C1)
 import appeals     # v0.25.55 (C4)
 import discord
@@ -31,6 +33,10 @@ async def _startup() -> None:
     """Start background tasks (transcript retention cleanup, allowlist seed)."""
     try:
         transcripts.start_cleanup_task()
+    except Exception:
+        pass
+    try:
+        notam_ingest.start_ingest_task()
     except Exception:
         pass
     try:
@@ -63,6 +69,7 @@ app.include_router(licenses.router)
 app.include_router(opensky.router)
 app.include_router(nms.router)
 app.include_router(openaip.router)
+app.include_router(notams.router)
 app.include_router(transcripts.router)
 app.include_router(appeals.router)
 app.include_router(discord.router)
