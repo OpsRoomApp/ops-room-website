@@ -248,27 +248,67 @@ def _parse_aixm_message(msg: ElementTree.Element, bulk_batch: str) -> dict[str, 
     }
 
 
-def _parse_aixm_blob(text: str, bulk_batch: str) -> list[dict[str, Any]]:
-    """Stream-parse the SOAP/AIXM initial-load XML without loading it whole.
+class _StreamingDecompressor(io.RawIOBase):
+    """File-like that incrementally decompresses a gzip/zlib blob.
 
-    iterparse needs a file-like object (a raw string is treated as a path),
-    and the canonical ``root.clear()`` pattern keeps memory bounded while
-    streaming a 20k+ message load.
+    ElementTree.iterparse reads from this stream chunk by chunk, so the
+    initial-load payload (the complete worldwide ACTIVE set -- hundreds of MB
+    when decompressed) is NEVER materialized in memory as one giant string.
+    On the 2GB production VPS the old ``decompress-then-decode`` path spiked
+    uvicorn past 780MB RSS and the kernel OOM-killed it mid-pull; streaming
+    keeps peak memory at ~compressed size + a small window.
     """
-    return list(_iter_aixm_rows(text, bulk_batch))
+
+    def __init__(self, data: bytes, wbits: int):
+        self._decompressor = zlib.decompressobj(wbits)
+        self._data = data
+        self._offset = 0
+        self._pending = b""
+        self._eof = False
+
+    def readable(self) -> bool:
+        return True
+
+    def read(self, size: int = -1) -> bytes:
+        want = size if size and size > 0 else 65536
+        while len(self._pending) < want and not self._eof:
+            raw = self._data[self._offset : self._offset + 32768]
+            self._offset += 32768
+            if not raw:
+                try:
+                    self._pending += self._decompressor.flush()
+                except zlib.error:
+                    pass
+                self._eof = True
+                break
+            try:
+                self._pending += self._decompressor.decompress(raw)
+            except zlib.error:
+                # Malformed or truncated stream -- stop feeding; the parse
+                # loop raises zlib.error to trigger the raw-zlib retry.
+                self._eof = True
+                break
+        out = self._pending[:want]
+        self._pending = self._pending[want:]
+        return out
 
 
-def _iter_aixm_rows(text: str, bulk_batch: str):
-    """Generator over AIXMBasicMessage rows.
+def _parse_aixm_blob(text: str, bulk_batch: str) -> list[dict[str, Any]]:
+    """Convenience wrapper for tests: parse a full XML string into rows."""
+    return list(_iter_aixm_rows(io.StringIO(text), bulk_batch))
+
+
+def _iter_aixm_rows(stream, bulk_batch: str):
+    """Generator over AIXMBasicMessage rows read from an open file-like
+    stream (StringIO for tests, _StreamingDecompressor for the bulk pull).
 
     Letting the caller consume rows one at a time (and batch the upserts)
     keeps peak memory bounded on small VPS hosts -- the initial load is the
     complete worldwide ACTIVE set and can reach tens of thousands of NOTAMs.
     """
-    source = text if isinstance(text, str) else text.decode("utf-8", errors="replace")
     try:
         root: ElementTree.Element | None = None
-        context = ElementTree.iterparse(io.StringIO(source), events=("start", "end"))
+        context = ElementTree.iterparse(stream, events=("start", "end"))
         for event, elem in context:
             if event == "start":
                 if root is None:
@@ -284,6 +324,8 @@ def _iter_aixm_rows(text: str, bulk_batch: str):
                 _log.warning("AIXM message skipped: %s", exc)
             if root is not None:
                 root.clear()
+    except zlib.error:
+        raise  # format retry handled by the caller
     except Exception as exc:
         _log.warning("AIXM parse error (partial load kept): %s", exc)
 
@@ -393,9 +435,11 @@ def _extract_features(payload: dict[str, Any]) -> list[dict[str, Any]]:
 # ── Job implementations ────────────────────────────────────────────────────
 
 
-async def _content_payload(client: httpx.AsyncClient, body: dict[str, Any], token: str) -> bytes | None:
-    """If the response carries a content path (large result sets), fetch and
-    decompress it; otherwise return None for the inline path."""
+async def _content_payload(client: httpx.AsyncClient, body: dict[str, Any], token: str, raw: bool = False) -> bytes | None:
+    """If the response carries a content path (large result sets), fetch it
+    and return the body. ``raw=True`` returns the compressed bytes unchanged
+    (for streaming decompression); otherwise the blob is decompressed here
+    (gzip, then raw zlib). Returns None for the inline path."""
     data = body.get("data") if isinstance(body.get("data"), dict) else body
     content_url = str(data.get("url") or "").strip()
     if not content_url:
@@ -412,6 +456,8 @@ async def _content_payload(client: httpx.AsyncClient, body: dict[str, Any], toke
         _log.warning("NMS content fetch returned HTTP %s", resp.status_code)
         return None
     raw = resp.content or b""
+    if raw:
+        return raw
     try:
         return zlib.decompress(raw, zlib.MAX_WBITS | 32)  # gzip
     except zlib.error:
@@ -448,22 +494,38 @@ async def run_bulk_pull() -> bool:
             if blob is None:
                 notam_db.record_sync_error("Bulk pull: no content URL returned for initial load")
                 return False
-        text = blob.decode("utf-8", errors="replace")
-        # Batch the upserts so peak memory stays bounded on the 2GB VPS --
-        # the initial load is the complete worldwide ACTIVE set.
+        # Stream the initial-load blob: iterparse reads decompressed chunks
+        # directly from the compressed bytes, so the full decoded AIXM string
+        # is never held in memory (it OOM-killed uvicorn on the 2GB VPS).
+        # Batched upserts additionally bound the row list.
+        # Try gzip first, then raw zlib. A format mismatch fails on the first
+        # chunk -- either as zlib.error or (because the reader returns an empty
+        # stream and iterparse bails) as zero parsed rows -- so retry the other
+        # wbits in both cases.
         ingested = 0
-        pending: list[dict[str, Any]] = []
-        for row in _iter_aixm_rows(text, batch):
-            pending.append(row)
-            if len(pending) >= 2000:
-                notam_db.upsert_notams(pending, bulk_batch=batch)
-                ingested += len(pending)
-                pending = []
-        if pending:
-            notam_db.upsert_notams(pending, bulk_batch=batch)
-            ingested += len(pending)
-        if not ingested:
-            notam_db.record_sync_error("Bulk pull: initial-load parsed zero NOTAMs")
+        last_failure: Exception | None = None
+        for wbits in (zlib.MAX_WBITS | 32, zlib.MAX_WBITS):  # gzip, then raw zlib
+            pending: list[dict[str, Any]] = []
+            ingested = 0
+            try:
+                for row in _iter_aixm_rows(_StreamingDecompressor(blob, wbits), batch):
+                    pending.append(row)
+                    if len(pending) >= 2000:
+                        notam_db.upsert_notams(pending, bulk_batch=batch)
+                        ingested += len(pending)
+                        pending = []
+                if pending:
+                    notam_db.upsert_notams(pending, bulk_batch=batch)
+                    ingested += len(pending)
+            except zlib.error as exc:
+                last_failure = exc
+                continue
+            if ingested > 0:
+                last_failure = None
+                break
+            last_failure = ValueError("initial-load parsed zero NOTAMs (format mismatch or empty payload)")
+        if last_failure is not None:
+            notam_db.record_sync_error(f"Bulk pull: initial-load failed: {last_failure}")
             return False
         cancelled = notam_db.mark_missing_cancelled(batch)
         notam_db.sync_state_set(
