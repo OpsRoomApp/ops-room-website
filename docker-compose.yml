@@ -50,6 +50,9 @@ services:
       - NMS_ENVIRONMENT=${NMS_ENVIRONMENT:-staging}
       - NMS_BASE_URL=${NMS_BASE_URL:-}
       - NMS_API_TOKEN=${NMS_API_TOKEN:-}
+      # OpenAIP airspace proxy (map enrichment). Key lives only on this server.
+      - OPENAIP_API_KEY=${OPENAIP_API_KEY:-}
+      - OPENAIP_PROXY_TOKEN=${OPENAIP_PROXY_TOKEN:-}
       - ANALYTICS_SALT=${ANALYTICS_SALT:-${JWT_SECRET:-}}
       - OPSROOM_RELEASES_DIR=/opt/opsroom-releases
       - RATE_LIMIT_LOGIN_PER_MIN=${RATE_LIMIT_LOGIN_PER_MIN:-10}
