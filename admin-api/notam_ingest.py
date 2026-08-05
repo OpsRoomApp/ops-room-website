@@ -112,6 +112,10 @@ def _parse_dt(value: Any) -> str:
 # ── AIXM initial-load parsing ──────────────────────────────────────────────
 
 
+def _local(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
 def _text_cancelled(text: Any) -> bool:
     """True when the NOTAM text itself declares a cancellation (e.g. the
     staging feed's ``NOTAM CANCELLED`` suffix). Fallback signal only -- the
@@ -251,7 +255,16 @@ def _parse_aixm_blob(text: str, bulk_batch: str) -> list[dict[str, Any]]:
     and the canonical ``root.clear()`` pattern keeps memory bounded while
     streaming a 20k+ message load.
     """
-    rows: list[dict[str, Any]] = []
+    return list(_iter_aixm_rows(text, bulk_batch))
+
+
+def _iter_aixm_rows(text: str, bulk_batch: str):
+    """Generator over AIXMBasicMessage rows.
+
+    Letting the caller consume rows one at a time (and batch the upserts)
+    keeps peak memory bounded on small VPS hosts -- the initial load is the
+    complete worldwide ACTIVE set and can reach tens of thousands of NOTAMs.
+    """
     source = text if isinstance(text, str) else text.decode("utf-8", errors="replace")
     try:
         root: ElementTree.Element | None = None
@@ -266,14 +279,13 @@ def _parse_aixm_blob(text: str, bulk_batch: str) -> list[dict[str, Any]]:
             try:
                 row = _parse_aixm_message(elem, bulk_batch)
                 if row:
-                    rows.append(row)
+                    yield row
             except Exception as exc:  # one bad message must not kill the load
                 _log.warning("AIXM message skipped: %s", exc)
             if root is not None:
                 root.clear()
     except Exception as exc:
         _log.warning("AIXM parse error (partial load kept): %s", exc)
-    return rows
 
 
 # ── GeoJSON incremental parsing ────────────────────────────────────────────
@@ -437,11 +449,22 @@ async def run_bulk_pull() -> bool:
                 notam_db.record_sync_error("Bulk pull: no content URL returned for initial load")
                 return False
         text = blob.decode("utf-8", errors="replace")
-        rows = _parse_aixm_blob(text, batch)
-        if not rows:
+        # Batch the upserts so peak memory stays bounded on the 2GB VPS --
+        # the initial load is the complete worldwide ACTIVE set.
+        ingested = 0
+        pending: list[dict[str, Any]] = []
+        for row in _iter_aixm_rows(text, batch):
+            pending.append(row)
+            if len(pending) >= 2000:
+                notam_db.upsert_notams(pending, bulk_batch=batch)
+                ingested += len(pending)
+                pending = []
+        if pending:
+            notam_db.upsert_notams(pending, bulk_batch=batch)
+            ingested += len(pending)
+        if not ingested:
             notam_db.record_sync_error("Bulk pull: initial-load parsed zero NOTAMs")
             return False
-        notam_db.upsert_notams(rows, bulk_batch=batch)
         cancelled = notam_db.mark_missing_cancelled(batch)
         notam_db.sync_state_set(
             last_bulk_pull_at=notam_db.now_utc(),
@@ -451,7 +474,7 @@ async def run_bulk_pull() -> bool:
         )
         _log.info(
             "NMS bulk pull complete: %d NOTAMs ingested (%d no longer active) batch=%s",
-            len(rows),
+            ingested,
             cancelled,
             batch,
         )
