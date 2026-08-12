@@ -42,6 +42,9 @@ MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "500"))
 RATE_LIMIT_LOGIN_PER_MIN = int(os.getenv("RATE_LIMIT_LOGIN_PER_MIN", "10"))
 RATE_LIMIT_UPLOAD_PER_MIN = int(os.getenv("RATE_LIMIT_UPLOAD_PER_MIN", "5"))
 
+# v0.25.80 -- RainViewer precipitation tile cache (server-cached proxy).
+RAINVIEWER_CACHE_DIR = Path(os.getenv("RAINVIEWER_CACHE_DIR", "/opt/opsroom-rainviewer"))
+
 # ---- Logging ----
 LOG_FILE = Path(os.getenv("ADMIN_LOG_FILE", "/var/log/opsroom-admin.log"))
 

@@ -57,6 +57,8 @@ services:
       # by 1 bulk pull / 24h + 1 incremental pull / 3 min; per-airport requests
       # are served from SQL so FAA quota is constant regardless of userbase.
       - NOTAMS_DB_PATH=/opt/opsroom-notams/notams.db
+      # RainViewer precipitation tile cache (server-cached proxy, v0.25.80).
+      - RAINVIEWER_CACHE_DIR=/opt/opsroom-rainviewer
       - NMS_INGEST_ENABLED=${NMS_INGEST_ENABLED:-1}
       - NOTAM_CLASSIFICATION=${NOTAM_CLASSIFICATION:-}
       - ANALYTICS_SALT=${ANALYTICS_SALT:-${JWT_SECRET:-}}
@@ -82,6 +84,8 @@ services:
       - /opt/opsroom-transcripts:/opt/opsroom-transcripts
       # Dedicated NOTAM database (v0.25.63), separate from the bot DB.
       - /opt/opsroom-notams:/opt/opsroom-notams
+      # RainViewer precipitation tile cache (server-cached proxy, v0.25.80).
+      - /opt/opsroom-rainviewer:/opt/opsroom-rainviewer
     networks:
       - opsroom-net
     healthcheck:
