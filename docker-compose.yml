@@ -40,6 +40,8 @@ services:
       - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-}
       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-}
       - DISCORD_REDIRECT_URI=${DISCORD_REDIRECT_URI:-https://admin.opsroom.live/api/auth/discord/callback}
+      - DISCORD_APP_CONNECT_REDIRECT_URI=${DISCORD_APP_CONNECT_REDIRECT_URI:-https://admin.opsroom.live/api/community/connect/callback}
+      - COMMUNITY_EVENT_TOKEN=${COMMUNITY_EVENT_TOKEN:-}
       - APPROVED_DISCORD_USERS=${APPROVED_DISCORD_USERS:-}
       - JWT_SECRET=${JWT_SECRET:-}
       - OPENSKY_CLIENT_ID=${OPENSKY_CLIENT_ID:-}

@@ -61,3 +61,18 @@ DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "https://admin.opsroom.
 APPROVED_DISCORD_USERS = set(
     uid.strip().lower() for uid in os.getenv("APPROVED_DISCORD_USERS", "").split(",") if uid.strip()
 )
+
+# End-user Discord app-connect (desktop app "Connect Discord"). Separate
+# redirect so an end-user connect can never touch the admin allowlist. This
+# MUST be registered verbatim in the Discord Developer Portal (OAuth2 > Redirects)
+# and match the community router's /connect/callback route exactly.
+DISCORD_APP_CONNECT_REDIRECT_URI = os.getenv(
+    "DISCORD_APP_CONNECT_REDIRECT_URI",
+    "https://admin.opsroom.live/api/community/connect/callback",
+)
+
+# Optional ops/testing bypass for community event ingestion. When set, a bearer
+# header matching this token lets the caller supply discord_id directly. Normal
+# end users authenticate with their per-user app_token from the connect flow
+# instead -- the desktop app never needs this secret.
+COMMUNITY_EVENT_TOKEN = os.getenv("COMMUNITY_EVENT_TOKEN", "")

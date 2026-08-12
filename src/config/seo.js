@@ -18,4 +18,5 @@ export const PAGE_TITLES = {
   contact: `Support: ${SITE.name}`,
   faq: `FAQ: ${SITE.name}`,
   privacy: `Privacy Policy: ${SITE.name}`,
+  leaderboard: `Community Leaderboard: ${SITE.name}`,
 };

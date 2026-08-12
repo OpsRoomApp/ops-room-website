@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import SEO from '../components/SEO.jsx';
 import { PAGE_TITLES, SITE } from '../config/seo.js';
 import VatsimFIDS from '../components/VatsimFIDS.jsx';
+import CommunityMap from '../components/CommunityMap.jsx';
+import { useCommunityLeaderboard } from '../hooks/useCommunity.js';
 
 /* Module definitions drawn from `app/static/opsroom.js` PAGE_LABELS and the
    /api/* endpoints in `app/main.py`. Codes match the source keys so support
@@ -38,6 +40,55 @@ const STRIP_LOOP = [
   { file: 'announcer.png',            label: 'Announcer' },
   { file: 'obs-overlay-studio.png',   label: 'OBS' },
 ];
+
+function HomeLeaderboard() {
+  const { leaderboard, loading } = useCommunityLeaderboard('alltime');
+  return (
+    <div className="community-live">
+      <div className="fids-topbar">
+        <div className="fids-eyebrow">
+          <span className="tag-dot" /> OPS ROOM / LEADERBOARD
+        </div>
+      </div>
+      <div className="fids-airport">
+        <div className="fids-airport-flap">TOP</div>
+        <div className="fids-airport-name">ALL TIME</div>
+      </div>
+      <div className="fids-table-wrap community-live-table">
+        {loading ? (
+          <div className="community-empty">LOADING...</div>
+        ) : leaderboard.length === 0 ? (
+          <div className="community-empty">NO PUBLIC FLIGHTS YET</div>
+        ) : (
+          <table className="fids-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>PILOT</th>
+                <th>FLIGHTS</th>
+                <th>HOURS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaderboard.slice(0, 5).map((row, i) => (
+                <tr key={row.username || i}>
+                  <td className="mono-bold">{i + 1}</td>
+                  <td className="mono-bold">{row.username || 'pilot'}</td>
+                  <td>{row.flights}</td>
+                  <td>{row.hours.toFixed(1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      <div className="fids-footer">
+        <Link to="/leaderboard">FULL LEADERBOARD &rarr;</Link>
+        <span className="muted">OPT-IN</span>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   useEffect(() => {
@@ -94,6 +145,24 @@ export default function Home() {
           </div>
           <div>
             <VatsimFIDS defaultAirport="EGLL" compact />
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container">
+          <div className="section-head">
+            <span className="section-eyebrow">/ LIVE NETWORK</span>
+            <h2 className="section-title">Who's flying OPS ROOM right now.</h2>
+            <p className="section-subtitle">
+              Live community flights and the all-time leaderboard. Every pilot
+              here explicitly opted into public visibility — nothing leaves the
+              sim without consent.
+            </p>
+          </div>
+          <div className="community-grid">
+            <CommunityMap />
+            <HomeLeaderboard />
           </div>
         </div>
       </section>

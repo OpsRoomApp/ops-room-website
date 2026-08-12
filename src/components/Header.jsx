@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { to: '/documentation', label: 'Docs' },
   { to: '/download', label: 'Downloads' },
   { to: '/changelog', label: 'Changelog' },
+  { to: '/leaderboard', label: 'Leaderboard' },
   { to: '/support', label: 'Support' },
   { to: 'https://discord.gg/Dv6fNAjhAt', label: 'Discord', external: true },
 ];

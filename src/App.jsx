@@ -12,6 +12,7 @@ import Privacy from './pages/Privacy.jsx';
 import NotFound from './pages/NotFound.jsx';
 import Transcript from './pages/Transcript.jsx';
 import Appeal from './pages/Appeal.jsx';
+import Leaderboard from './pages/Leaderboard.jsx';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="privacy" element={<Privacy />} />
           <Route path="transcripts/:ticketId" element={<Transcript />} />
           <Route path="appeal" element={<Appeal />} />
+          <Route path="leaderboard" element={<Leaderboard />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

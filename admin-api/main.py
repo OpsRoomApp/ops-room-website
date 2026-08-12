@@ -25,6 +25,7 @@ import notam_ingest  # v0.25.63: NOTAM bulk + incremental ingestion jobs
 import transcripts  # v0.25.55 (C1)
 import appeals     # v0.25.55 (C4)
 import discord
+import community   # community flight events + leaderboard + live feed
 
 app = FastAPI(title="OPS ROOM Admin API")
 
@@ -71,6 +72,8 @@ app.add_middleware(
         "https://opsroom.live",
         "http://localhost:8080",
         "http://127.0.0.1:8080",
+        "http://127.0.0.1:5173",
+        "http://localhost:5173",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -92,6 +95,7 @@ app.include_router(rainviewer.router)
 app.include_router(transcripts.router)
 app.include_router(appeals.router)
 app.include_router(discord.router)
+app.include_router(community.router)
 
 
 @app.get("/api/ping")

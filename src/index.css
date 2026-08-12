@@ -1202,3 +1202,44 @@ h3 { font-size: 1rem; }
   .section-reveal { opacity: 1; transform: none; transition: none; }
   .tilt-card:hover { transform: none !important; box-shadow: none; }
 }
+
+
+/* Community live network + leaderboard (v0.25.0) */
+.community-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 1.5rem; align-items: start; }
+.community-live { background: var(--bg-panel); border: 1px solid var(--line-strong); display: flex; flex-direction: column; min-height: 300px; }
+.community-live-table { max-height: 360px; }
+.community-empty { padding: 2rem; text-align: center; color: var(--fg-muted); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; }
+.community-panel { background: var(--bg-panel); border: 1px solid var(--line-strong); overflow: auto; }
+.leaderboard-tabs { display: flex; margin-bottom: 1.25rem; background: var(--bg-elevated); border: 1px solid var(--line-strong); }
+@media (max-width: 860px) { .community-grid { grid-template-columns: 1fr; } }
+
+
+/* Community live map (Leaflet) */
+.community-map-panel { overflow: hidden; }
+.community-map { height: 460px; width: 100%; background: #05080c; z-index: 0; }
+.community-map .leaflet-popup-content-wrapper {
+  background: var(--bg-elevated);
+  color: var(--fg);
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+.community-map .leaflet-popup-tip { background: var(--bg-elevated); }
+.community-map .leaflet-popup-content { margin: 10px 12px; font-family: var(--font-mono); line-height: 1.45; }
+.community-map-popup { display: flex; flex-direction: column; gap: 2px; min-width: 150px; }
+.community-map-popup b { color: var(--fg); font-size: 13px; letter-spacing: .06em; }
+.community-map-popup span { color: var(--fg-soft); font-size: 11px; }
+.community-map .leaflet-control-attribution { background: rgba(5,8,12,.72); color: #64748b; font-size: 9px; }
+.community-map .leaflet-control-attribution a { color: #8aa0ad; }
+.community-map .leaflet-bar a { background: var(--bg-elevated); color: var(--fg-soft); border-color: var(--line-strong); }
+.community-flight-dot { background: transparent; border: none; }
+.community-flight-dot span {
+  display: block; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--acc, #00e5ff);
+  box-shadow: 0 0 0 2px rgba(0,229,255,.35), 0 0 12px rgba(0,229,255,.8);
+  animation: community-pulse 2s ease-in-out infinite;
+}
+@keyframes community-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.45); opacity: .65; }
+}
