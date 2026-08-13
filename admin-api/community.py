@@ -125,6 +125,7 @@ def _ensure_tables(conn: sqlite3.Connection) -> None:
             longitude    REAL,
             altitude_ft  REAL,
             ground_speed REAL,
+            heading      REAL,
             visibility   TEXT NOT NULL DEFAULT 'discord',
             last_seen    TEXT NOT NULL
         );
@@ -138,6 +139,15 @@ def _ensure_tables(conn: sqlite3.Connection) -> None:
         );
         """
     )
+    # #103: idempotent migration for the heading column on pre-existing live
+    # tables (the CREATE above only affects new installs).
+    try:
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(community_live)").fetchall()}
+        if "heading" not in cols:
+            conn.execute("ALTER TABLE community_live ADD COLUMN heading REAL")
+            conn.commit()
+    except Exception:
+        pass
     conn.commit()
 
 
@@ -298,8 +308,8 @@ async def community_event(request: Request):
         raise HTTPException(status_code=400, detail="Invalid JSON body")
 
     event_type = str(body.get("event_type") or "").lower()
-    if event_type not in ("takeoff", "landing"):
-        raise HTTPException(status_code=400, detail="event_type must be takeoff or landing")
+    if event_type not in ("takeoff", "landing", "descent"):
+        raise HTTPException(status_code=400, detail="event_type must be takeoff, landing or descent")
 
     discord_id, visibility, username = _resolve_identity(request)
     if visibility == "shared":  # ops bypass: identity comes from the body
@@ -378,8 +388,8 @@ async def community_live(request: Request):
             """
             INSERT INTO community_live
                 (discord_id, callsign, aircraft, registration, origin, destination,
-                 phase, latitude, longitude, altitude_ft, ground_speed, visibility, last_seen)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 phase, latitude, longitude, altitude_ft, ground_speed, heading, visibility, last_seen)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(discord_id) DO UPDATE SET
                 callsign = excluded.callsign,
                 aircraft = excluded.aircraft,
@@ -391,6 +401,7 @@ async def community_live(request: Request):
                 longitude = excluded.longitude,
                 altitude_ft = excluded.altitude_ft,
                 ground_speed = excluded.ground_speed,
+                heading = excluded.heading,
                 visibility = excluded.visibility,
                 last_seen = excluded.last_seen
             """,
@@ -406,12 +417,43 @@ async def community_live(request: Request):
                 body.get("longitude"),
                 body.get("altitude_ft"),
                 body.get("ground_speed_kts"),
+                body.get("heading"),
                 visibility,
                 _now_iso(),
             ),
         )
 
     return {"ok": True}
+
+
+@router.post("/settings")
+async def community_settings_sync(request: Request):
+    """Sync the desktop app's sharing settings to the server (#100).
+
+    The app is the source of truth for what the user picked in Host Setup
+    (visibility / share_flights). Previously the app stored its choice locally
+    while the server kept its own default ('discord'), so "public" in the app
+    never reached the website map (403 on /live). This endpoint lets the app
+    update its OWN app_links row so the two stores cannot drift.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+    discord_id, visibility, _ = _resolve_identity(request)
+
+    new_visibility = str(body.get("visibility") or "").strip().lower()
+    if new_visibility and new_visibility not in ("discord", "public", "hidden"):
+        raise HTTPException(status_code=400, detail="visibility must be discord, public or hidden")
+
+    with _db() as conn:
+        _ensure_tables(conn)
+        if new_visibility:
+            conn.execute(
+                "UPDATE app_links SET visibility = ?, updated_at = ? WHERE app_token = ?",
+                (new_visibility, _now_iso(), request.headers.get("authorization", "")[7:].strip()),
+            )
+    return {"ok": True, "discord_id": discord_id, "visibility": new_visibility or visibility}
 
 
 # ---------------------------------------------------------------------------
@@ -445,6 +487,7 @@ async def community_live_feed():
                 "longitude": r["longitude"],
                 "altitude_ft": r["altitude_ft"],
                 "ground_speed_kts": r["ground_speed"],
+                "heading": r["heading"],
                 "last_seen": r["last_seen"],
             }
             for r in rows

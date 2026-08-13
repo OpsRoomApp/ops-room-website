@@ -26,12 +26,36 @@ function popupHtml(f) {
   );
 }
 
-function flightDot() {
+function tooltipHtml(f) {
+  // #103: hover shows the route + live details without needing a click.
+  const route = f.origin && f.destination ? `${f.origin} → ${f.destination}` : '----';
+  const ac = f.aircraft || '----';
+  const phase = (f.phase || 'AIRBORNE').toUpperCase().slice(0, 12);
+  const gs = f.ground_speed_kts ? `${Math.round(f.ground_speed_kts)} KT` : '----';
+  return (
+    `<div class="community-map-tooltip">` +
+    `<b>${f.callsign || '----'}</b>` +
+    `<span>${route}</span>` +
+    `<span>${ac} · ${phase}</span>` +
+    `<span>${altitudeStr(f.altitude_ft)} · ${gs}</span>` +
+    `</div>`
+  );
+}
+
+// #103: aircraft marker — a plane glyph rotated by live heading. Heading is
+// degrees true from the telemetry feed; the icon's inner SVG is rotated via
+// CSS so Leaflet's divIcon can update it cheaply on every feed tick.
+const PLANE_SVG =
+  '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>';
+
+function flightIcon(f) {
+  const heading = Number(f.heading);
+  const rotate = Number.isFinite(heading) ? `rotate(${heading}deg)` : '';
   return L.divIcon({
-    className: 'community-flight-dot',
-    html: '<span></span>',
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
+    className: 'community-flight-plane',
+    html: `<span class="plane-wrap" style="transform:${rotate}">${PLANE_SVG}</span>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
   });
 }
 
@@ -91,10 +115,14 @@ export default function CommunityMap() {
       if (existing) {
         existing.setLatLng(pos);
         existing.setPopupContent(popupHtml(f));
+        existing.setTooltipContent(tooltipHtml(f));
+        // #103: keep the plane rotated toward the live heading.
+        existing.setIcon(flightIcon(f));
       } else {
-        const marker = L.marker(pos, { icon: flightDot() })
+        const marker = L.marker(pos, { icon: flightIcon(f) })
           .addTo(map)
-          .bindPopup(popupHtml(f));
+          .bindPopup(popupHtml(f))
+          .bindTooltip(tooltipHtml(f), { direction: 'top', offset: [0, -14], opacity: 0.95 });
         markersRef.current[id] = marker;
       }
     }

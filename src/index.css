@@ -1232,14 +1232,16 @@ h3 { font-size: 1rem; }
 .community-map .leaflet-control-attribution { background: rgba(5,8,12,.72); color: #64748b; font-size: 9px; }
 .community-map .leaflet-control-attribution a { color: #8aa0ad; }
 .community-map .leaflet-bar a { background: var(--bg-elevated); color: var(--fg-soft); border-color: var(--line-strong); }
-.community-flight-dot { background: transparent; border: none; }
-.community-flight-dot span {
-  display: block; width: 14px; height: 14px; border-radius: 50%;
-  background: var(--acc, #00e5ff);
-  box-shadow: 0 0 0 2px rgba(0,229,255,.35), 0 0 12px rgba(0,229,255,.8);
-  animation: community-pulse 2s ease-in-out infinite;
+.community-flight-plane { background: transparent; border: none; }
+.community-flight-plane .plane-wrap {
+  display: block; width: 26px; height: 26px;
+  color: #00e5ff;
+  filter: drop-shadow(0 0 3px rgba(0,229,255,.9)) drop-shadow(0 0 10px rgba(0,229,255,.55));
+  transition: transform .6s linear;
 }
-@keyframes community-pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.45); opacity: .65; }
-}
+.community-flight-plane .plane-wrap svg { display: block; }
+.community-map-tooltip { display: flex; flex-direction: column; gap: 1px; min-width: 130px; }
+.community-map-tooltip b { color: var(--fg); font-size: 12px; letter-spacing: .06em; }
+.community-map-tooltip span { color: var(--fg-soft); font-size: 10px; }
+.community-map .leaflet-tooltip { background: var(--bg-elevated); border: 1px solid var(--line-strong); color: var(--fg); box-shadow: 0 6px 18px rgba(0,0,0,.5); }
+.community-map .leaflet-tooltip-top:before { border-top-color: var(--line-strong); }
