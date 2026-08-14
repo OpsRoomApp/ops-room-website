@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useCommunityLive } from '../hooks/useCommunity.js';
@@ -45,7 +45,9 @@ function tooltipHtml(f) {
 // #103: aircraft marker - a plane glyph rotated by live heading. Heading is
 // degrees true from the telemetry feed; the icon's inner SVG is rotated via
 // CSS so Leaflet's divIcon can update it cheaply on every feed tick.
-// #111: dotted FMS-style route line between SimBrief navlog waypoints.
+// #111: dotted FMS-style route line between SimBrief navlog waypoints. The
+// route line is only drawn for the flight the user selects on the map, so a
+// busy network stays clean (fix: routes no longer render for every aircraft).
 const ROUTE_STYLE = { color: '#4dc3ff', weight: 2, opacity: 0.85, dashArray: '5 9', lineJoin: 'round' };
 function routePoints(f) {
   const r = f.route;
@@ -63,14 +65,18 @@ function routePoints(f) {
 const PLANE_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>';
 
-function flightIcon(f) {
+function flightIcon(f, selected) {
   const heading = Number(f.heading);
   const rotate = Number.isFinite(heading) ? `rotate(${heading}deg)` : '';
+  // Selected aircraft gets a larger, amber icon so its identity is obvious
+  // while its route line is shown (inline styles - no extra CSS required).
+  const color = selected ? '#ffd166' : 'currentColor';
+  const svg = selected ? PLANE_SVG.replace('stroke="currentColor"', `stroke="${color}"`) : PLANE_SVG;
   return L.divIcon({
-    className: 'community-flight-plane',
-    html: `<span class="plane-wrap" style="transform:${rotate}">${PLANE_SVG}</span>`,
-    iconSize: [26, 26],
-    iconAnchor: [13, 13],
+    className: selected ? 'community-flight-plane community-flight-plane--selected' : 'community-flight-plane',
+    html: `<span class="plane-wrap" style="transform:${rotate}">${svg}</span>`,
+    iconSize: selected ? [34, 34] : [26, 26],
+    iconAnchor: selected ? [17, 17] : [13, 13],
   });
 }
 
@@ -78,14 +84,18 @@ function flightIcon(f) {
  * Live community map: public-visibility OPS ROOM flights rendered as markers
  * on a dark CARTO basemap. The map is initialised once and markers are
  * reconciled on each feed poll so positions move without recreating the map.
+ *
+ * Route polylines are drawn only for the flight selected by the user (marker
+ * click); clicking empty map space clears the selection.
  */
 export default function CommunityMap() {
   const { flights, loading } = useCommunityLive();
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef({});
-  const routesRef = useRef({});   // #111: dashed SimBrief route polylines per flight
+  const routesRef = useRef({});   // #111: dashed SimBrief route polylines (selected flight only)
   const fittedRef = useRef(false);
+  const [selectedId, setSelectedId] = useState(null);
 
   // Initialise the Leaflet map once.
   useEffect(() => {
@@ -104,6 +114,8 @@ export default function CommunityMap() {
       subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(map);
+    // Clicking empty map space deselects the flight and hides its route.
+    map.on('click', () => setSelectedId(null));
     mapRef.current = map;
     return () => {
       try {
@@ -127,6 +139,7 @@ export default function CommunityMap() {
       if (f.latitude == null || f.longitude == null) continue;
       const id = String(f.discord_id);
       live.add(id);
+      const isSelected = id === selectedId;
       const pos = [Number(f.latitude), Number(f.longitude)];
       const existing = markersRef.current[id];
       if (existing) {
@@ -134,16 +147,17 @@ export default function CommunityMap() {
         existing.setPopupContent(popupHtml(f));
         existing.setTooltipContent(tooltipHtml(f));
         // #103: keep the plane rotated toward the live heading.
-        existing.setIcon(flightIcon(f));
+        existing.setIcon(flightIcon(f, isSelected));
       } else {
-        const marker = L.marker(pos, { icon: flightIcon(f) })
+        const marker = L.marker(pos, { icon: flightIcon(f, isSelected) })
           .addTo(map)
           .bindPopup(popupHtml(f))
-          .bindTooltip(tooltipHtml(f), { direction: 'top', offset: [0, -14], opacity: 0.95 });
+          .bindTooltip(tooltipHtml(f), { direction: 'top', offset: [0, -14], opacity: 0.95 })
+          .on('click', () => setSelectedId(id));
         markersRef.current[id] = marker;
       }
-      // #111: dotted SimBrief route line under the marker.
-      const pts = routePoints(f);
+      // #111: dotted SimBrief route line - only for the selected flight.
+      const pts = isSelected ? routePoints(f) : null;
       const routeLayer = routesRef.current[id];
       if (pts) {
         if (routeLayer) {
@@ -160,6 +174,7 @@ export default function CommunityMap() {
       if (!live.has(id)) {
         map.removeLayer(markersRef.current[id]);
         delete markersRef.current[id];
+        if (id === selectedId) setSelectedId(null);
       }
     }
     for (const id of Object.keys(routesRef.current)) {
@@ -177,7 +192,7 @@ export default function CommunityMap() {
         /* single marker or invalid bounds */
       }
     }
-  }, [flights]);
+  }, [flights, selectedId]);
 
   return (
     <div className="community-live community-map-panel">

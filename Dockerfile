@@ -5,6 +5,11 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# Umami tracker id comes in as a build arg (docker-compose.yml args:) and is
+# baked into the JS bundle by Vite (src/main.jsx). Declared ARG -> ENV here or
+# Vite never sees it inside the build stage.
+ARG VITE_UMAMI_WEBSITE_ID
+ENV VITE_UMAMI_WEBSITE_ID=$VITE_UMAMI_WEBSITE_ID
 RUN npm run build
 
 # Stage 2: Build the admin frontend

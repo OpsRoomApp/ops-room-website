@@ -19,6 +19,7 @@ export default function Download() {
 
   const version = manifest?.latest_version || manifest?.version || '';
   const downloadUrl = manifest?.download_url || manifest?.url || '';
+  const installerUrl = manifest?.installer_url || '';
   const codename = manifest?.codename || '';
   const channel = manifest?.channel || 'stable';
   const sha256 = manifest?.sha256 || '';
@@ -63,6 +64,15 @@ export default function Download() {
             </div>
           )}
 
+          <div className="setup-note" style={{ marginBottom: '1.5rem' }}>
+            <span className="setup-note-label">NEW HERE?</span>
+            <p>
+              Follow the <Link to="/getting-started">Install & Setup Guide</Link> - a visual,
+              screen-by-screen walkthrough from download to first flight, mirroring exactly what
+              happens in the app.
+            </p>
+          </div>
+
           <div className="dl-grid">
             <div className="dl-main">
               {manifest ? (
@@ -84,13 +94,23 @@ export default function Download() {
                   <div className="dl-actions" style={{ marginTop: '1rem' }}>
                     <a
                       className="btn btn-primary"
-                      href={downloadUrl}
+                      href={installerUrl || downloadUrl}
                       rel="noopener noreferrer"
                       onClick={handleDownload}
                       style={{ fontSize: '1.05rem', padding: '0.75rem 2rem' }}
                     >
                       Download OPS ROOM
                     </a>
+                    {installerUrl && downloadUrl && (
+                      <a
+                        className="btn btn-ghost"
+                        href={downloadUrl}
+                        rel="noopener noreferrer"
+                        onClick={handleDownload}
+                      >
+                        Portable ZIP
+                      </a>
+                    )}
                     <Link className="btn btn-ghost" to="/changelog">
                       View Changelog
                     </Link>
@@ -98,6 +118,9 @@ export default function Download() {
 
                   <div className="dl-meta-line" style={{ marginTop: '1rem' }}>
                     <span>VERSION <strong>v{version}</strong></span>
+                    {installerUrl && (
+                      <span>INSTALLER <strong>EXE</strong></span>
+                    )}
                     {sha256 && (
                       <span>SHA256 <strong className="mono">{sha256.slice(0, 16)}...</strong></span>
                     )}
@@ -146,7 +169,8 @@ export default function Download() {
                 <div className="panel-body">
                   <p className="muted">
                     Installer problems, telemetry issues, or aircraft adapter questions:{' '}
-                    see <Link to="/support">Support</Link> or{' '}
+                    see <Link to="/support">Support</Link>, the{' '}
+                    <Link to="/getting-started">Setup Guide</Link>, or{' '}
                     <Link to="/documentation">Documentation</Link>.
                   </p>
                 </div>

@@ -148,3 +148,48 @@ open it, set status/notes, and download the ZIP if one was attached.
   build and updating `BUG_REPORT_SECRET` together.
 - Diagnostics ZIPs are validated (ZIP magic, ≤8 MB decoded) and stored only
   after the report row is accepted.
+
+---
+
+# Support form (v0.25.x) — opsroom.live/support
+
+The website /support page now has a contact form wired to the same admin-api.
+
+## What was added
+
+- `admin-api/support.py` — public ingest `POST /api/v1/support` (name, email,
+  subject, message) stored in `support_messages` (SQLite, `SUPPORT_DB`,
+  default `/opt/opsroom-support/support.sqlite3`); per-IP rate limit
+  (5/min default, `SUPPORT_RATE_LIMIT_PER_MIN`). Admin (OAuth-gated):
+  `GET /api/v1/support` (list + filters), `GET /api/v1/support/stats`,
+  `GET|PUT /api/v1/support/{id}` (detail / status+notes).
+- `nginx.conf` — `location ^~ /api/v1/support` on the main site proxies the
+  public POST same-origin to the admin-api.
+- `docker-compose.yml` — `SUPPORT_DB` / `SUPPORT_RATE_LIMIT_PER_MIN` env vars
+  + `/opt/opsroom-support` volume.
+- Admin panel: new **Support Requests** page (`admin/src/pages/SupportRequests.jsx`,
+  route `/support-requests`, nav item) — stats, filters, detail, status/notes.
+- Website: `src/pages/Contact.jsx` rewritten — Discord link fixed + button,
+  and the form posts to `/api/v1/support`.
+
+## Deploy
+
+Same build as the bug-report work:
+
+```bash
+cd /opt/opsroom
+git pull
+mkdir -p /opt/opsroom-support
+docker compose up -d --build
+```
+
+Verify:
+
+```bash
+curl -sS -X POST https://opsroom.live/api/v1/support \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Smoke","email":"smoke@example.com","subject":"Deploy check","message":"Testing the support form ingest."}'
+# -> {"ok":true,"id":"SUP-..."}
+```
+
+Then open `https://admin.opsroom.live/support-requests` — the message shows as NEW.

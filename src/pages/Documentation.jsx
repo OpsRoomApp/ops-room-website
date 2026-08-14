@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import SEO from '../components/SEO.jsx';
 import { PAGE_TITLES } from '../config/seo.js';
 
@@ -197,7 +198,9 @@ export default function Documentation() {
             <p className="section-subtitle">
               Six field-tested guides. Pick the one that matches the question you are
               trying to answer right now. System requirements are folded into the
-              install guide at Step 0.
+              install guide at Step 0. Prefer pictures? The{' '}
+              <Link to="/getting-started">Setup Guide</Link> walks through every screen
+              of the app visually.
             </p>
           </div>
 

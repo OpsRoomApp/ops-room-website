@@ -4,6 +4,7 @@ import SEO from '../components/SEO.jsx';
 import { PAGE_TITLES, SITE } from '../config/seo.js';
 import VatsimFIDS from '../components/VatsimFIDS.jsx';
 import CommunityMap from '../components/CommunityMap.jsx';
+import FlightsimBadge from '../components/FlightsimBadge.jsx';
 import { useCommunityLeaderboard } from '../hooks/useCommunity.js';
 
 /* Module definitions drawn from `app/static/opsroom.js` PAGE_LABELS and the
@@ -139,8 +140,11 @@ export default function Home() {
             </p>
             <div className="hero-actions">
               <Link to="/download" className="btn btn-primary">Download for Windows</Link>
-              <Link to="/screenshots" className="btn btn-ghost">View Screenshots</Link>
-              <Link to="/documentation" className="btn btn-ghost">Read Documentation</Link>
+              <Link to="/demo" className="btn btn-ghost">Interactive Demo</Link>
+              <Link to="/documentation" className="btn btn-ghost">Documentation</Link>
+            </div>
+            <div className="hero-badge-row">
+              <FlightsimBadge compact />
             </div>
           </div>
           <div>

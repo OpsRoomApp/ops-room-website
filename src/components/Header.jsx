@@ -4,11 +4,10 @@ import { NavLink, Link } from 'react-router-dom';
 const NAV_LINKS = [
   { to: '/', label: 'Home' },
   { to: '/features', label: 'Modules' },
-  { to: '/screenshots', label: 'Screenshots' },
-  { to: '/documentation', label: 'Docs' },
+  { to: '/demo', label: 'Live Demo' },
   { to: '/download', label: 'Downloads' },
-  { to: '/changelog', label: 'Changelog' },
-  { to: '/leaderboard', label: 'Leaderboard' },
+  { to: '/getting-started', label: 'Setup Guide' },
+  { to: '/documentation', label: 'Docs' },
   { to: '/support', label: 'Support' },
   { to: 'https://discord.gg/Dv6fNAjhAt', label: 'Discord', external: true },
 ];
@@ -54,10 +53,6 @@ export default function Header() {
           VATSIM FEED <strong>CONN</strong>
         </span>
         <span className="ss-item ss-item--sep">/</span>
-        <span className="ss-item ss-item--hide-xs">
-          FIDS COUNT <strong>06 / 12</strong>
-        </span>
-        <span className="ss-item ss-item--sep ss-item--hide-xs">/</span>
         <span className="ss-item ss-item--hide-sm">
           TELEMETRY <strong>24 Hz</strong>
         </span>

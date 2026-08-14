@@ -27,6 +27,9 @@ import appeals     # v0.25.55 (C4)
 import discord
 import community   # community flight events + leaderboard + live feed
 import bug_reports  # v0.25.x: desktop app bug report ingest + admin panel
+import support       # v0.25.x: website /support contact form ingest + admin review
+import flightsim     # v0.25.x: flightsim.to social-proof badge stats
+import analytics_umami  # v0.25.x: Umami website analytics bridge (admin panel)
 
 app = FastAPI(title="OPS ROOM Admin API")
 
@@ -68,6 +71,10 @@ async def _startup() -> None:
         bug_reports.init_db()
     except Exception:
         pass
+    try:
+        support.init_db()
+    except Exception:
+        pass
 
 # CORS: allow admin frontend, main website, and desktop app (localhost).
 app.add_middleware(
@@ -102,6 +109,9 @@ app.include_router(appeals.router)
 app.include_router(discord.router)
 app.include_router(community.router)
 app.include_router(bug_reports.router)
+app.include_router(support.router)
+app.include_router(flightsim.router)
+app.include_router(analytics_umami.router)
 
 
 @app.get("/api/ping")

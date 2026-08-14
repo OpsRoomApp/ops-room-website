@@ -3,7 +3,9 @@ import Layout from './components/Layout.jsx';
 import Home from './pages/Home.jsx';
 import Features from './pages/Features.jsx';
 import Screenshots from './pages/Screenshots.jsx';
+import Demo from './pages/Demo.jsx';
 import Download from './pages/Download.jsx';
+import GettingStarted from './pages/GettingStarted.jsx';
 import Documentation from './pages/Documentation.jsx';
 import Changelog from './pages/Changelog.jsx';
 import Support from './pages/Contact.jsx';
@@ -22,6 +24,8 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="features" element={<Features />} />
           <Route path="screenshots" element={<Screenshots />} />
+          <Route path="demo" element={<Demo />} />
+          <Route path="getting-started" element={<GettingStarted />} />
           <Route path="documentation" element={<Documentation />} />
           <Route path="download" element={<Download />} />
           <Route path="changelog" element={<Changelog />} />

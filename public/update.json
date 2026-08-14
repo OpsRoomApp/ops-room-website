@@ -1,15 +1,17 @@
 {
-  "latest_version": "0.25.13",
-  "version": "0.25.13",
+  "latest_version": "0.25.0",
+  "version": "0.25.0",
   "codename": "Release Migration",
   "channel": "stable",
   "minimum_supported_version": "0.22.0",
   "mandatory": false,
   "release_notes_url": "https://opsroom.live/changelog",
-  "download_url": "https://opsroom.live/downloads/OPS_ROOM_v0_25_13_Public_Windows_x64.zip",
-  "url": "https://opsroom.live/downloads/OPS_ROOM_v0_25_13_Public_Windows_x64.zip",
-  "fallback_download_url": "https://github.com/OpsRoomApp/ops-room-releases/releases/download/v0.25.13/OPS_ROOM_v0_25_13_Public_Windows_x64.zip",
+  "download_url": "https://opsroom.live/downloads/OPS_ROOM_v0_25_0_Public_Windows_x64.zip",
+  "url": "https://opsroom.live/downloads/OPS_ROOM_v0_25_0_Public_Windows_x64.zip",
+  "fallback_download_url": "https://github.com/OpsRoomApp/ops-room-releases/releases/download/v0.25.0/OPS_ROOM_v0_25_0_Public_Windows_x64.zip",
+  "installer_url": "https://opsroom.live/downloads/OPS_ROOM_Setup_0.25.0.exe",
+  "installer_sha256": "TO_BE_FILLED_AFTER_BUILD",
   "sha256": "TO_BE_FILLED_AFTER_BUILD",
-  "message": "OPS ROOM v0.25.13 is available.",
-  "notes": "OPS ROOM v0.25.13 migrates updates to opsroom.live. GitHub remains the emergency fallback."
+  "message": "OPS ROOM v0.25.0 is available.",
+  "notes": "OPS ROOM v0.25.0 is the public release: the installer bridge (zip + installer auto-update), Black Box recorder, performance calculator, Live OFP with crew sign-off, NOTAM closure markers, Fenix EFB loading integration and the rebuilt telemetry backbone."
 }

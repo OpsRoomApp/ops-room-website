@@ -3,47 +3,18 @@ import { PAGE_TITLES } from '../config/seo.js';
 
 const ENTRIES = [
   {
-    v: 'v0.25.0',
-    date: '2026-07-25',
+    v: 'v0.24.1',
+    date: '2026-07',
     bullets: [
-      'ChartFox runtime diagnostics: counters, performance stats, token state, recent failures.',
-      'ChartFox chart files rendered locally (no iframe, no cross-origin issues).',
-      'Passenger satisfaction scores surfaced in the Finance page (last flight and lifetime average).',
-      'Finance panel layout: equal-height cards, consistent spacing.',
-      'Diagnostics endpoint /api/charts/chartfox/debug exposed with masked secrets.',
-    ],
-  },
-  {
-    v: 'v0.25.11',
-    date: '2026-07-09',
-    bullets: [
-      'Recording schema v2: sidestick fields appended at tail, schema bumped.',
-      'Airports chips: fixed ICAO rendering on arrival chips.',
-      'Build validator: route count updated to 239/207.',
-    ],
-  },
-  {
-    v: 'v0.25.10',
-    date: '2026-06-22',
-    bullets: [
-      'Chart rendering: ChartFox and Navigraph catalog integration with local PDF viewing.',
-      'New `/api/charts/chartfox/file/{chart_id}` proxy endpoint with proper error codes.',
-    ],
-  },
-  {
-    v: 'v0.25.9',
-    date: '2026-06-04',
-    bullets: [
-      'Universal Announcer: distance-based in-sim volume curve enabled by default.',
-      'Module preloader: TTL cache + background prewarmer for slow endpoints.',
-    ],
-  },
-  {
-    v: 'v0.25.8',
-    date: '2026-05-19',
-    bullets: [
-      'In-sim replay system: replay captures SkyDolly-like synchronized scenes.',
-      'Recording v1 schema extended: additional fuel / pitch / FMS state.',
+      'Black Box - a continuous flight data recorder that captures your whole flight and replays it back inside the simulator, with scrub, pause and speed controls. Landing rate, G-loading and touchdown speed are captured automatically.',
+      'Performance calculator - enter ZFW and CG and get takeoff speeds (V1/VR/V2), flap and trim recommendations, flex temperature and required runway distance, fed by live weather and your SimBrief flight plan.',
+      'Live OFP dispatch board - track planned vs actual times, fuel and weights during the flight, and sign the loadsheet with a typed or drawn electronic signature, stored per flight.',
+      'Runway and taxiway closure markers rendered directly in the simulator from live NOTAM data.',
+      'A full operations console - briefing (SimBrief, METAR/TAF, live radar, NOTAMs, charts), procedures and checklists, a FIDS departure board, and ground-services control for GSX.',
+      'Flight Watch in the air, runway awareness callouts, and CPDLC datalink via Hoppie.',
+      'Cabin PA Announcer with volume that follows the camera, plus streamer-ready OBS overlays.',
+      'Logbook and PIREP that break down landing quality and stability, and an airline economy with revenue, costs and passenger satisfaction that reacts to how you fly.',
+      'Discord integration - Rich Presence, takeoff and landing posts, a leaderboard, and a live “who is flying now” community map.',
     ],
   },
 ];
@@ -51,16 +22,16 @@ const ENTRIES = [
 export default function Changelog() {
   return (
     <>
-      <SEO title={PAGE_TITLES.changelog} description="OPS ROOM release history: version notes, dates, and changes per release." path="/changelog" />
+      <SEO title={PAGE_TITLES.changelog} description="What's new in OPS ROOM v0.24.1 - Black Box recording, performance calculator, live dispatch, and more." path="/changelog" />
 
       <section className="section">
         <div className="container">
           <div className="section-head">
             <span className="section-eyebrow">/ CHANGELOG</span>
-            <h1 className="section-title">Release history.</h1>
+            <h1 className="section-title">What&apos;s new.</h1>
             <p className="section-subtitle">
-              Notes from each OPS ROOM public release. Full changelog is included in the
-              application under “Release Notes”.
+              OPS ROOM is freeware for Windows and works alongside Microsoft Flight Simulator
+              2020 and 2024 - from briefing to debrief, in one app.
             </p>
           </div>
 

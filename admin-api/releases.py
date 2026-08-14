@@ -110,7 +110,7 @@ def _build_manifest_from_entry(entry: dict[str, Any]) -> dict[str, Any]:
     version = entry["version"]
     filename = entry["filename"]
     sha256 = entry["sha256"]
-    return {
+    manifest = {
         "latest_version": version,
         "version": version,
         "codename": entry.get("codename", ""),
@@ -125,6 +125,19 @@ def _build_manifest_from_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "notes": entry.get("notes") or f"Release v{version}",
         "release_notes_url": "https://opsroom.live/changelog",
     }
+    # Installer bridge (#78, Phase 1): when the matching Setup.exe sits in the
+    # releases dir, advertise it so installer-managed installs update via the
+    # installer (zip path stays for loose-folder installs). Old updaters ignore
+    # the additive fields; the app-side updater validates installer_url/installer_sha256.
+    installer_name = f"OPS_ROOM_Setup_{version}.exe"
+    installer_path = RELEASES_DIR / installer_name
+    if installer_path.is_file():
+        try:
+            manifest["installer_url"] = f"https://opsroom.live/downloads/{installer_name}"
+            manifest["installer_sha256"] = _sha256_file(installer_path)
+        except Exception:
+            pass
+    return manifest
 
 
 def _backup_manifest(reason: str = "") -> Path:

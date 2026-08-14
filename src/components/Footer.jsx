@@ -49,8 +49,10 @@ export default function Footer() {
             <ul>
               <li><Link to="/features">Modules</Link></li>
               <li><Link to="/screenshots">Screenshots</Link></li>
+              <li><Link to="/getting-started">Setup Guide</Link></li>
               <li><Link to="/download">Downloads</Link></li>
               <li><Link to="/changelog">Changelog</Link></li>
+              <li><Link to="/leaderboard">Leaderboard</Link></li>
               <li><a href="https://discord.gg/Dv6fNAjhAt" target="_blank" rel="noopener noreferrer">Discord</a></li>
             </ul>
           </div>
@@ -84,7 +86,6 @@ export default function Footer() {
         </div>
         <div className="footer-bottom">
           <span className="footer-build">BUILD v0.25.0 · {year} · OPSROOM.LIVE</span>
-          <span>Not affiliated with Microsoft, Asobo Studio, or VATSIM.</span>
         </div>
       </div>
     </footer>

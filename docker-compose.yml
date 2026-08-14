@@ -3,6 +3,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # Umami tracker id is baked into the JS bundle at build time (Vite),
+      # so it must be a build arg, not a runtime env var. Set it in .env
+      # once the Umami website exists; empty = no tracker in the build.
+      args:
+        - VITE_UMAMI_WEBSITE_ID=${VITE_UMAMI_WEBSITE_ID:-}
     container_name: opsroom-website
     restart: unless-stopped
     ports:
@@ -79,6 +84,22 @@ services:
       - BUG_REPORTS_DB=/opt/opsroom-bug-reports/bug_reports.sqlite3
       - BUG_REPORTS_STORAGE_DIR=/opt/opsroom-bug-reports
       - BUG_REPORTS_RATE_LIMIT_PER_MIN=${BUG_REPORTS_RATE_LIMIT_PER_MIN:-10}
+      # Website support form (v0.25.x): public /support contact form messages.
+      - SUPPORT_DB=/opt/opsroom-support/support.sqlite3
+      - SUPPORT_RATE_LIMIT_PER_MIN=${SUPPORT_RATE_LIMIT_PER_MIN:-5}
+      # flightsim.to social-proof badge (v0.25.x). Optional; without a key the
+      # homepage badge shows a plain link instead of live stats.
+      - FLIGHTSIM_API_KEY=${FLIGHTSIM_API_KEY:-}
+      - FLIGHTSIM_ADDON_ID=${FLIGHTSIM_ADDON_ID:-}
+      - FLIGHTSIM_ADDON_URL=${FLIGHTSIM_ADDON_URL:-}
+      - FLIGHTSIM_STATS_URL=${FLIGHTSIM_STATS_URL:-}
+      # Umami website analytics bridge (v0.25.x): read-only stats for the
+      # admin panel Analytics page. Talks to the umami sibling container
+      # over the docker network; empty credentials = not configured.
+      - UMAMI_API_URL=http://umami:3000
+      - UMAMI_USERNAME=${UMAMI_USERNAME:-}
+      - UMAMI_PASSWORD=${UMAMI_PASSWORD:-}
+      - UMAMI_WEBSITE_ID=${UMAMI_WEBSITE_ID:-}
       # Path to the OPS CONTROL bot SQLite database. When set, the Discord
       # admin endpoints read live bot data. Optional -- the API starts
       # without it and reports the bot database as unavailable.
@@ -97,6 +118,8 @@ services:
       - /opt/opsroom-rainviewer:/opt/opsroom-rainviewer
       # Bug report storage: SQLite DB + diagnostics ZIPs (v0.25.x).
       - /opt/opsroom-bug-reports:/opt/opsroom-bug-reports
+      # Website support form storage (v0.25.x).
+      - /opt/opsroom-support:/opt/opsroom-support
     networks:
       - opsroom-net
     healthcheck:
@@ -106,9 +129,52 @@ services:
       retries: 3
       start_period: 15s
 
+  # Self-hosted Umami analytics (v0.25.x): cookieless, GDPR-friendly, no
+  # consent banner needed on the public site. The tracker script and its
+  # ingest endpoint are proxied same-origin by nginx (opsroom.live/umami.js
+  # and /api/send); the dashboard binds to localhost only and is reached
+  # via SSH tunnel or through the admin panel Analytics page (admin-api
+  # bridge). First-run setup: create the admin account + the opsroom.live
+  # website once, then fill UMAMI_USERNAME/PASSWORD/WEBSITE_ID in .env.
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: opsroom-umami
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-umami}@umami-db:5432/umami
+      DATABASE_TYPE: postgresql
+      APP_SECRET: ${UMAMI_APP_SECRET:-change-me}
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    networks:
+      - opsroom-net
+
+  umami-db:
+    image: postgres:16-alpine
+    container_name: opsroom-umami-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:-umami}
+    volumes:
+      - umami-db-data:/var/lib/postgresql/data
+    networks:
+      - opsroom-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
+      start_period: 5s
+
 networks:
   opsroom-net:
     driver: bridge
 
 volumes:
   admin-logs:
+  umami-db-data:

@@ -1,0 +1,224 @@
+/* Getting Started / Install & Setup guide (src/pages/GettingStarted.jsx)
+   Visual language mirrors the OPS ROOM host console and the site demo UI. */
+
+.setup-shell {
+  --dbg: #080a07; --dpanel: #12150f; --ddeep: #0b0e09; --dline: #4b4e3a;
+  --dline-bright: #73765a; --dline-soft: #2a2d22; --dtext: #f0ecd9;
+  --dmuted: #aaa98d; --damber: #efbd47; --damber-pale: #ffe09a;
+  --dgreen: #74ff7a; --dred: #ff6a5a;
+  --dterm: "Cascadia Mono", "Consolas", "SFMono-Regular", Menlo, "Courier New", monospace;
+  --dcond: "Bahnschrift Condensed", "DIN Condensed", "Arial Narrow", "Roboto Condensed", Arial, sans-serif;
+}
+.setup-shell .demo-panel { min-height: 0; }
+
+/* Callout note (also used by the Downloads page) */
+.setup-note {
+  margin-top: 1.25rem; border: 1px solid var(--line-strong); border-left: 3px solid var(--acc);
+  background: var(--bg-inset); padding: 1rem 1.25rem; display: flex; gap: 1rem; align-items: baseline;
+}
+.setup-note-label {
+  flex: none; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em;
+  color: var(--acc); text-transform: uppercase;
+}
+.setup-note p { margin: 0; color: var(--fg-soft); font-size: 0.86rem; line-height: 1.6; }
+.setup-note a { color: var(--acc); }
+
+/* Step 1 - download (installer only) */
+.setup-dl {
+  background: var(--bg-panel); border: 1px solid var(--line); padding: 1.4rem;
+  display: flex; flex-direction: column; gap: 0.9rem; max-width: 720px;
+}
+.setup-dl-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.setup-dl-head h3 {
+  font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.06em;
+  color: var(--fg); text-transform: uppercase; margin: 0;
+}
+.setup-dl > p { color: var(--fg-soft); font-size: 0.88rem; line-height: 1.65; margin: 0; }
+.setup-dl-list { list-style: none; display: grid; gap: 0.4rem; margin: 0; padding: 0; }
+.setup-dl-list li {
+  padding-left: 1.1rem; position: relative; color: var(--fg-muted); font-size: 0.84rem;
+}
+.setup-dl-list li::before {
+  content: "+"; position: absolute; left: 0; color: var(--acc); font-family: var(--font-mono);
+}
+
+/* Step 2 - host console mockup */
+.setup-host {
+  border: 1px solid var(--dline-bright); background: var(--dbg); color: var(--dtext);
+  font-family: var(--dterm); box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+  background-image: linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 5rem 100%;
+}
+.setup-host-masthead {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.7rem 1.1rem; border-bottom: 1px solid var(--dline-bright); background: #0d100b;
+  flex-wrap: wrap;
+}
+.setup-host-title {
+  display: flex; align-items: center; gap: 0.6rem; min-width: 0;
+  font-size: 0.78rem; letter-spacing: 0.06em;
+}
+.setup-host-title img { flex: none; }
+.setup-host-title strong { font-weight: 800; color: var(--dtext); letter-spacing: 0.1em; }
+.setup-host-build { color: var(--damber); border: 1px solid var(--dline); padding: 0.1rem 0.35rem; font-size: 0.68rem; }
+.setup-host-title span { color: var(--dmuted); font-size: 0.62rem; letter-spacing: 0.12em; }
+.setup-host-clock { display: flex; align-items: center; gap: 1.1rem; }
+.setup-host-clock b { font-size: 0.78rem; color: var(--damber-pale); }
+.setup-host-clock > span { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--dgreen); font-size: 0.6rem; letter-spacing: 0.1em; }
+.setup-host-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--dline); padding: 0 0.6rem; background: #0b0e09; }
+.setup-host-tabs button {
+  border: 0; border-right: 1px solid var(--dline); background: transparent; color: var(--dmuted);
+  font-family: var(--dcond); font-weight: 750; letter-spacing: 0.09em; font-size: 0.72rem;
+  padding: 0.6rem 1rem; cursor: default;
+}
+.setup-host-tabs button.active { color: var(--damber-pale); box-shadow: inset 0 -2px 0 var(--damber); }
+.setup-host-body { padding: 1rem; display: grid; gap: 1rem; }
+.setup-host-banner {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: 1px solid var(--dline);
+  background: #0d100b;
+}
+.setup-host-banner > div { padding: 0.6rem 0.9rem; border-right: 1px solid var(--dline); }
+.setup-host-banner > div:last-child { border-right: 0; }
+.setup-host-banner span { display: block; font-size: 0.54rem; color: var(--dmuted); letter-spacing: 0.12em; font-weight: 700; }
+.setup-host-banner strong { display: block; margin-top: 0.25rem; font-size: 0.8rem; color: var(--damber-pale); letter-spacing: 0.06em; }
+.setup-host-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1rem; }
+.setup-host-conns { padding: 0.4rem 0.9rem; }
+.setup-host-conn {
+  display: grid; grid-template-columns: 1rem 1fr auto; gap: 0.7rem; align-items: center;
+  padding: 0.55rem 0; border-bottom: 1px solid var(--dline-soft);
+  font-size: 0.62rem; letter-spacing: 0.05em;
+}
+.setup-host-conn:last-child { border-bottom: 0; }
+.setup-host-conn b { color: var(--dgreen); font-weight: 800; }
+.setup-host-access { display: grid; grid-template-columns: auto 1fr; gap: 1rem; padding: 0.9rem; align-items: center; }
+.setup-qr {
+  width: 5.4rem; height: 5.4rem; flex: none; position: relative;
+  border: 1px solid var(--dline-bright); background: #fff;
+  display: grid; place-items: center;
+}
+.setup-qr::before {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-conic-gradient(#101315 0 25%, #fff 0 50%) 50% / 13px 13px;
+  opacity: 0.55;
+}
+.setup-qr::after {
+  content: "QR"; position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: var(--dterm); font-size: 0.62rem; letter-spacing: 0.25em;
+  color: var(--dbg); background: rgba(255,255,255,0.72);
+}
+.setup-host-access-main span {
+  display: block; font-size: 0.56rem; color: var(--dmuted); letter-spacing: 0.12em; font-weight: 700;
+}
+.setup-host-addr { display: flex; align-items: center; gap: 0.6rem; margin: 0.4rem 0; flex-wrap: wrap; }
+.setup-host-addr b { font-size: 0.8rem; color: var(--damber-pale); letter-spacing: 0.04em; overflow-wrap: anywhere; }
+.setup-host-access-main p { margin: 0; color: var(--dmuted); font-size: 0.62rem; line-height: 1.6; }
+.setup-host-actions-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.setup-host-actions-row .demo-primary { background: var(--damber); color: var(--dbg); }
+
+/* Step 3 - first-run onboarding wizard mockup */
+.setup-onb {
+  max-width: 600px; margin: 0 auto;
+  border: 1px solid var(--dline-bright); background: var(--dbg); color: var(--dtext);
+  font-family: var(--dterm); box-shadow: 0 24px 70px rgba(0,0,0,0.45);
+  background-image: linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 5rem 100%;
+}
+.setup-onb-head {
+  display: flex; align-items: center; gap: 1rem; padding: 0.8rem 1.1rem;
+  border-bottom: 1px solid var(--dline-bright); background: #0d100b;
+}
+.setup-onb-title { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.setup-onb-title span { font-size: 0.52rem; color: var(--damber); letter-spacing: 0.18em; font-weight: 700; }
+.setup-onb-title strong { font-size: 0.9rem; letter-spacing: 0.1em; color: var(--dtext); }
+.setup-onb-dots { display: flex; gap: 0.4rem; margin-left: auto; }
+.setup-onb-dot {
+  width: 9px; height: 9px; padding: 0; border: 1px solid var(--dline-bright);
+  background: transparent; cursor: pointer; border-radius: 50%;
+}
+.setup-onb-dot.active { background: var(--damber); border-color: var(--damber); }
+.setup-onb-close {
+  border: 0; background: transparent; color: var(--dmuted); font-size: 1.2rem;
+  line-height: 1; cursor: pointer; padding: 0.2rem 0.4rem;
+}
+.setup-onb-close:hover { color: var(--dtext); }
+.setup-onb-body { padding: 1.2rem 1.3rem; }
+.setup-onb-step { display: grid; gap: 0.9rem; }
+.setup-onb-step h2 { font-family: var(--dcond); font-size: 1.25rem; letter-spacing: 0.05em; color: var(--dtext); }
+.setup-onb-step h3 {
+  font-size: 0.58rem; color: var(--dmuted); letter-spacing: 0.14em; font-weight: 700;
+}
+.setup-onb-sub { margin: 0; color: var(--dmuted); font-size: 0.68rem; line-height: 1.6; }
+.setup-onb-sub a { color: var(--damber-pale); }
+.setup-onb-field { display: grid; gap: 0.4rem; font-size: 0.58rem; color: var(--dmuted); font-weight: 700; letter-spacing: 0.08em; }
+.setup-onb-field input, .setup-onb-field select {
+  width: 100%; min-width: 0; border: 1px solid var(--dline); background: #080a07;
+  color: var(--dtext); padding: 0.55rem 0.65rem; font-size: 0.78rem; font-weight: 400;
+  letter-spacing: 0.02em;
+}
+.setup-onb-field input::placeholder { color: var(--dmuted); opacity: 0.6; }
+.setup-onb-optional { color: var(--damber); font-weight: 400; font-size: 0.54rem; letter-spacing: 0.1em; }
+.setup-onb-folder-row { display: flex; gap: 0.5rem; }
+.setup-onb-folder-row input { flex: 1; }
+.setup-onb-btn {
+  border: 1px solid var(--dline-bright); background: #11140e; color: var(--dtext);
+  font-family: var(--dterm); font-size: 0.6rem; letter-spacing: 0.1em; font-weight: 700;
+  padding: 0.5rem 0.85rem; cursor: pointer; white-space: nowrap;
+}
+.setup-onb-btn:hover { border-color: var(--damber); color: var(--damber-pale); }
+.setup-onb-btn.primary { background: var(--damber); color: var(--dbg); border-color: var(--damber); }
+.setup-onb-actions { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+.setup-onb-state { font-size: 0.6rem; color: var(--dred); letter-spacing: 0.1em; font-weight: 700; }
+.setup-onb-check {
+  display: flex; align-items: center; gap: 0.5rem; font-size: 0.62rem; color: var(--dtext);
+  letter-spacing: 0.06em; cursor: pointer;
+}
+.setup-onb-check input { accent-color: var(--damber); }
+.setup-onb-status { display: grid; gap: 0; border: 1px solid var(--dline-soft); background: #0a0d08; }
+.setup-onb-status-row {
+  display: grid; grid-template-columns: 1rem 1fr auto; gap: 0.6rem; align-items: center;
+  padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--dline-soft); font-size: 0.62rem;
+}
+.setup-onb-status-row:last-child { border-bottom: 0; }
+.setup-onb-status-row small { color: var(--dmuted); font-size: 0.58rem; }
+.setup-onb-ok, .setup-onb-warn {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+}
+.setup-onb-ok { background: var(--dgreen); }
+.setup-onb-warn { background: var(--damber); }
+.setup-onb-foot {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.9rem 1.1rem;
+  border-top: 1px solid var(--dline); background: #0b0e09;
+}
+.setup-onb-spacer { flex: 1; }
+.setup-onb-foot .setup-onb-btn { min-width: 6.5rem; }
+
+/* Step 4 - done */
+.setup-done {
+  display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap;
+  border: 1px solid var(--line-strong); border-left: 3px solid var(--nominal);
+  background: var(--bg-inset); padding: 1.1rem 1.3rem; max-width: 720px;
+}
+.setup-done-pill {
+  flex: none; display: inline-flex; align-items: center; gap: 0.5rem;
+  border: 1px solid rgba(0,230,118,0.4); color: var(--nominal);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em;
+  padding: 0.35rem 0.6rem; text-transform: uppercase;
+}
+.setup-done-pill i {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--nominal);
+  box-shadow: 0 0 8px var(--nominal);
+}
+.setup-done p { margin: 0; color: var(--fg-soft); font-size: 0.88rem; line-height: 1.6; }
+.setup-done a { color: var(--acc); }
+
+@media (max-width: 900px) {
+  .setup-host-grid { grid-template-columns: 1fr; }
+  .setup-host-banner { grid-template-columns: 1fr; }
+  .setup-host-banner > div { border-right: 0; border-bottom: 1px solid var(--dline); }
+  .setup-host-banner > div:last-child { border-bottom: 0; }
+  .setup-host-masthead { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 640px) {
+  .setup-host-access { grid-template-columns: 1fr; }
+  .setup-done { flex-direction: column; align-items: flex-start; }
+}

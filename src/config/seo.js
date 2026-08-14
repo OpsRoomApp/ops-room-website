@@ -13,6 +13,7 @@ export const PAGE_TITLES = {
   features: `Modules: ${SITE.name}`,
   technology: `Technology: ${SITE.name}`,
   download: `Download: ${SITE.name}`,
+  gettingStarted: `Install & Setup: ${SITE.name}`,
   documentation: `Documentation: ${SITE.name}`,
   changelog: `Changelog: ${SITE.name}`,
   contact: `Support: ${SITE.name}`,

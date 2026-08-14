@@ -68,6 +68,24 @@ BUG_REPORTS_DB = Path(os.getenv("BUG_REPORTS_DB", "/opt/opsroom-bug-reports/bug_
 BUG_REPORTS_STORAGE_DIR = Path(os.getenv("BUG_REPORTS_STORAGE_DIR", "/opt/opsroom-bug-reports"))
 BUG_REPORTS_RATE_LIMIT_PER_MIN = int(os.getenv("BUG_REPORTS_RATE_LIMIT_PER_MIN", "10"))
 
+# ---- Website support form (v0.25.x) ----
+# Public contact form on opsroom.live/support. No secret (public by design);
+# per-IP rate limiting is the primary spam defense.
+SUPPORT_DB = Path(os.getenv("SUPPORT_DB", "/opt/opsroom-support/support.sqlite3"))
+SUPPORT_RATE_LIMIT_PER_MIN = int(os.getenv("SUPPORT_RATE_LIMIT_PER_MIN", "5"))
+
+# ---- flightsim.to social-proof badge (v0.25.x) ----
+# Optional: when FLIGHTSIM_API_KEY + FLIGHTSIM_ADDON_ID are set, the website
+# homepage badge shows the live rating/download count (server-cached 6h).
+# Without a key the badge degrades to a plain link. Get a key from
+# https://flightsim.to (developer API).
+FLIGHTSIM_API_KEY = os.getenv("FLIGHTSIM_API_KEY", "").strip()
+FLIGHTSIM_ADDON_ID = os.getenv("FLIGHTSIM_ADDON_ID", "").strip()
+FLIGHTSIM_ADDON_URL = os.getenv("FLIGHTSIM_ADDON_URL", "").strip()
+FLIGHTSIM_STATS_URL = os.getenv(
+    "FLIGHTSIM_STATS_URL", "https://api.flightsim.to/v1/modules/{addon_id}"
+).strip()
+
 # v0.25.55 -- Discord OAuth (C3)
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
@@ -90,3 +108,14 @@ DISCORD_APP_CONNECT_REDIRECT_URI = os.getenv(
 # end users authenticate with their per-user app_token from the connect flow
 # instead -- the desktop app never needs this secret.
 COMMUNITY_EVENT_TOKEN = os.getenv("COMMUNITY_EVENT_TOKEN", "")
+
+# ---- Umami website analytics (self-hosted, cookieless) ----
+# Read-only bridge powering the admin panel Analytics page. The Umami
+# service runs as a sibling container on the opsroom-net network; the
+# admin-api talks to it directly. When UMAMI_USERNAME/PASSWORD are empty
+# the bridge reports ``configured: false`` and the admin page shows a
+# setup hint instead of numbers.
+UMAMI_API_URL = os.getenv("UMAMI_API_URL", "http://umami:3000").strip()
+UMAMI_USERNAME = os.getenv("UMAMI_USERNAME", "").strip()
+UMAMI_PASSWORD = os.getenv("UMAMI_PASSWORD", "").strip()
+UMAMI_WEBSITE_ID = os.getenv("UMAMI_WEBSITE_ID", "").strip()

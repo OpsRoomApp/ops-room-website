@@ -43,6 +43,8 @@ export default function Layout() {
           <NavLink to="/audit">Audit</NavLink>
           <NavLink to="/support">Support</NavLink>
           <NavLink to="/bug-reports">Bug Reports</NavLink>
+          <NavLink to="/support-requests">Support Requests</NavLink>
+          <NavLink to="/analytics">Analytics</NavLink>
         </nav>
         <div className="admin-user">
           {user.avatar && <img src={user.avatar} alt="" />}
