@@ -621,6 +621,46 @@ h3 { font-size: 1rem; }
 .changelog-list-bullets { padding-left: 1.1rem; color: var(--fg-soft); }
 .changelog-list-bullets li { margin-bottom: 0.4rem; }
 
+/* Markdown-rendered release notes (v0.25.x) */
+.changelog-body { color: var(--fg-soft); font-size: 0.95rem; line-height: 1.55; }
+.changelog-body h1,
+.changelog-body h2,
+.changelog-body h3 {
+  font-family: var(--font-mono);
+  color: var(--acc);
+  margin: 1rem 0 0.4rem;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+.changelog-body h1 { font-size: 1.15rem; }
+.changelog-body h2 { font-size: 1.05rem; }
+.changelog-body p { margin: 0.5rem 0; }
+.changelog-body ul { padding-left: 1.2rem; margin: 0.5rem 0; }
+.changelog-body ol { padding-left: 1.2rem; margin: 0.5rem 0; }
+.changelog-body li { margin-bottom: 0.4rem; }
+.changelog-body strong { color: var(--fg); font-weight: 600; }
+.changelog-body a { color: var(--acc); text-decoration: underline; }
+.changelog-body blockquote {
+  border-left: 2px solid var(--line-inset);
+  margin: 0.5rem 0;
+  padding-left: 0.9rem;
+  color: var(--fg-muted);
+}
+.changelog-body code {
+  background: var(--bg-inset, rgba(255, 255, 255, 0.05));
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+.changelog-body pre {
+  background: var(--bg-inset, rgba(0, 0, 0, 0.35));
+  padding: 0.6rem 0.75rem;
+  border-radius: 4px;
+  overflow: auto;
+}
+.changelog-message { color: var(--fg-muted); font-size: 0.95rem; }
+
 /* ---------- Support ---------- */
 .support-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); border: 1px solid var(--line); background: var(--bg-panel); }
 .support-tile { padding: 1.25rem; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }

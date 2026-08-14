@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import ReleaseNotesEditor from '../components/ReleaseNotesEditor.jsx';
 
 const API = '/api/releases/upload';
 const INSTALLER_API = '/api/releases/upload-installer';
@@ -165,8 +166,12 @@ export default function Upload() {
         </div>
 
         <div className="form-group">
-          <label>Release notes</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Brief description of this release..." />
+          <label>Release notes (Markdown)</label>
+          <ReleaseNotesEditor value={notes} onChange={setNotes} />
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '0.35rem' }}>
+            The same notes feed the website changelog, the Discord bot and the instant
+            Discord posts on publish. Pasted markdown is rendered safely.
+          </p>
         </div>
 
         <button className="btn btn-primary" type="submit" disabled={!file || uploading}>

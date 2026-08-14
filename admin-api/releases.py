@@ -15,6 +15,7 @@ DRAFT entries are invisible to users.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -33,6 +34,7 @@ from clientip import client_ip
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from auth import verify_session
+from discord_webhooks import notify_release
 from config import (
     LOG_FILE,
     MANIFEST_BACKUP_DIR,
@@ -107,6 +109,26 @@ def _write_manifest(data: dict[str, Any], path: Path = MANIFEST_PATH) -> None:
     os.replace(tmp, path)
 
 
+def _plain_text(markdown: str | None) -> str:
+    """Strip light markdown so the desktop update prompt reads cleanly.
+
+    The app renders the manifest ``notes`` field as plain, HTML-escaped text;
+    keeping the raw markdown there would show literal ``##``/``**`` symbols.
+    """
+    lines: list[str] = []
+    for raw in (markdown or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        for prefix in ("### ", "## ", "# "):
+            if line.startswith(prefix):
+                line = line[len(prefix):].strip()
+                break
+        line = line.replace("**", "").replace("__", "")
+        lines.append(line)
+    return "\n".join(lines)
+
+
 def _build_manifest_from_entry(entry: dict[str, Any]) -> dict[str, Any]:
     """Construct a full update.json manifest from a release catalog entry."""
     version = entry["version"]
@@ -125,10 +147,13 @@ def _build_manifest_from_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "fallback_download_url": f"https://github.com/OpsRoomApp/ops-room-releases/releases/download/{version}/{filename}",
         "sha256": sha256,
         "message": f"OPS ROOM v{version} is available.",
-        "notes": entry.get("notes") or f"Release v{version}",
+        # The manifest notes are shown in the desktop app's update prompt as
+        # plain text (HTML-escaped), so strip light markdown here; the raw
+        # markdown stays in the catalog and is served by /api/public/releases.
+        "notes": _plain_text(entry.get("notes")) or f"Release v{version}",
         "release_notes_url": "https://opsroom.live/changelog",
     }
-    # Installer bridge (#78, Phase 1): when the matching Setup.exe is present
+    # Installer availability (#78): when the matching Setup.exe is present
     # (tracked on the catalog entry, with a disk scan as fallback), advertise it
     # so installer-managed installs update via the installer (zip path stays for
     # loose-folder installs). Old updaters ignore the additive fields; the
@@ -730,6 +755,13 @@ async def publish_release(request: Request, _session: dict = Depends(verify_sess
         "result": "success",
         "backup": str(backup),
     })
+
+    # Instant Discord notifications (#release-notes + #downloads). Fire and
+    # forget so publish latency is unaffected; each webhook posts are best-effort.
+    try:
+        asyncio.get_running_loop().create_task(notify_release(entry, manifest))
+    except Exception:
+        pass
 
     return {
         "ok": True,

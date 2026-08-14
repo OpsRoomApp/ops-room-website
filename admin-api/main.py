@@ -30,6 +30,7 @@ import bug_reports  # v0.25.x: desktop app bug report ingest + admin panel
 import support       # v0.25.x: website /support contact form ingest + admin review
 import flightsim     # v0.25.x: flightsim.to social-proof badge stats
 import analytics_umami  # v0.25.x: Umami website analytics bridge (admin panel)
+import public_releases  # v0.25.x: public release history (website changelog + Discord bot)
 
 app = FastAPI(title="OPS ROOM Admin API")
 
@@ -112,6 +113,7 @@ app.include_router(bug_reports.router)
 app.include_router(support.router)
 app.include_router(flightsim.router)
 app.include_router(analytics_umami.router)
+app.include_router(public_releases.router)
 
 
 @app.get("/api/ping")
