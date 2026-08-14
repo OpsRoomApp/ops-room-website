@@ -8,11 +8,34 @@ admin-api bridge. No consent banner is needed: Umami sets no cookies.
 
 ---
 
+> **IMPORTANT — Umami is pinned to v2 (`postgresql-v2.19.0`, the final v2
+> release).** The `postgresql-latest` tag now resolves to **Umami v3**, which
+> removed `/api/auth/setup` and changed the REST API (login, websites, stats),
+> breaking the admin-api bridge and every curl below. Symptom: the setup curl
+> replies with a Next.js "Page not found" HTML page (not JSON) from `:3000`.
+>
+> If that happens you are on v3 and must re-pin to v2.19.0 **and reset the
+> umami-db volume** (v3's schema is incompatible with v2 — only do this when
+> there is no analytics data yet, e.g. first install):
+>
+> ```bash
+> cd /opt/opsroom
+> docker compose stop umami umami-db
+> docker compose rm -f umami umami-db
+> docker volume ls | grep umami-db          # get the exact volume name
+> docker volume rm opsroom_umami-db-data    # fresh install, no data yet — safe
+> docker compose up -d umami umami-db
+> ```
+>
+> Then continue with the setup below.
+
+---
+
 ## 1. What changed
 
 | File | Change |
 |---|---|
-| `docker-compose.yml` | New `umami` service (ghcr.io/umami-software/umami:postgresql-latest) + `umami-db` (postgres:16-alpine) + `umami-db-data` volume. Umami binds `127.0.0.1:3000` only (dashboard is not public). Admin-api gets `UMAMI_API_URL=http://umami:3000` + credentials env. Website service gets a `VITE_UMAMI_WEBSITE_ID` **build arg** (the tracker id is baked into the JS at build time). |
+| `docker-compose.yml` | New `umami` service (**pinned** `ghcr.io/umami-software/umami:postgresql-v2.19.0`) + `umami-db` (postgres:16-alpine) + `umami-db-data` volume. Umami binds `127.0.0.1:3000` only (dashboard is not public). Admin-api gets `UMAMI_API_URL=http://umami:3000` + credentials env. Website service gets a `VITE_UMAMI_WEBSITE_ID` **build arg** (the tracker id is baked into the JS at build time). |
 | `nginx.conf` | Main site: `location = /umami.js` and `location = /api/send` proxy same-origin to the umami container (exact-match locations win over the static-asset regex). |
 | `src/main.jsx` | Injects the tracker `<script>` only when `VITE_UMAMI_WEBSITE_ID` is set at build time. |
 | `admin-api/analytics_umami.py` | **New.** Read-only bridge: `GET /api/analytics/web/{status,overview,top-pages,referrers,browsers,devices,countries}` (OAuth-gated like the rest of the panel). Logs into Umami with `UMAMI_USERNAME`/`UMAMI_PASSWORD`, caches the session token, resolves `UMAMI_WEBSITE_ID` (falls back to the first website in the account). Unconfigured = `{"ok": false, "configured": false}` and the panel shows a setup hint. |
@@ -113,6 +136,9 @@ cd admin-api && python tests/test_analytics_umami.py   # expect 10/10 PASS
   The privacy policy already covers this (website analytics section).
 - **Dashboard access**: the UI binds to `127.0.0.1:3000` on the VPS, so it is
   reachable only via SSH tunnel or through the admin panel Analytics page.
+- **Do NOT switch to `postgresql-latest`**: that tag is Umami v3 now. The
+  admin-api bridge, the setup curl, and the smoke test are all v2 API. Pin
+  stays at `postgresql-v2.19.0` until the bridge is ported to v3.
 - **Removing it**: remove the `umami`/`umami-db` services from
   `docker-compose.yml`, drop the `VITE_UMAMI_WEBSITE_ID` build arg and the
   `main.jsx` tracker block, delete the `UMAMI_*` env vars, and rebuild.
