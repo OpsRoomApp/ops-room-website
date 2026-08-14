@@ -59,16 +59,16 @@ export default function Privacy() {
               <h2>4. What the app transmits</h2>
               <h3 style={{ marginTop: '1rem' }}>4.1 Update checks</h3>
               <p>
-                On startup, the app checks <code>opsroom.live/api/update.json</code> for a new version.
+                On startup, the app checks our update service for a new version.
                 This is a standard HTTP request that may expose your IP address to us (or to our hosting
-                provider) and, if our server is unreachable, to GitHub as a fallback. No identifying
+                provider) and, if our primary server is unreachable, to a hosted fallback. No identifying
                 information beyond the request itself is sent. Update checks can be disabled in Settings.
               </p>
               <h3 style={{ marginTop: '1rem' }}>4.2 Bug reports</h3>
               <p>
                 When you voluntarily use the in-app "Report a bug" flow, the app sends the report text
-                you provide and - if you choose to attach it - a diagnostics archive to our server
-                (<code>admin.opsroom.live</code>). The diagnostics archive may contain versions, module
+                you provide and - if you choose to attach it - a diagnostics archive to our secure
+                server. The diagnostics archive may contain versions, module
                 names, installed add-ons, and configuration excerpts needed to diagnose the issue. It is
                 stored for the purpose of fixing bugs and is not used for any other purpose.
               </p>
@@ -129,7 +129,7 @@ export default function Privacy() {
               <h2>6. Cookies</h2>
               <p>
                 The public website sets <strong>no cookies</strong>. The admin panel (a separate,
-                access-controlled tool at <code>admin.opsroom.live</code>) uses a session cookie after
+                access-controlled area) uses a session cookie after
                 you sign in with GitHub or Discord OAuth; it is strictly necessary for authentication
                 and is limited to that subdomain.
               </p>

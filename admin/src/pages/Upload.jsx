@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 
 const API = '/api/releases/upload';
+const INSTALLER_API = '/api/releases/upload-installer';
 
 export default function Upload() {
   const [file, setFile] = useState(null);
@@ -14,6 +15,14 @@ export default function Upload() {
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef(null);
 
+  // Installer (EXE) state
+  const [instFile, setInstFile] = useState(null);
+  const [instUploading, setInstUploading] = useState(false);
+  const [instResult, setInstResult] = useState(null);
+  const [instError, setInstError] = useState('');
+  const [instDragOver, setInstDragOver] = useState(false);
+  const instFileRef = useRef(null);
+
   const handleFile = (f) => {
     if (!f) return;
     const name = f.name || '';
@@ -25,6 +34,19 @@ export default function Upload() {
     setFile(f);
     setError('');
     setResult(null);
+  };
+
+  const handleInstFile = (f) => {
+    if (!f) return;
+    const name = f.name || '';
+    const re = /^OPS_ROOM_Setup_\d+\.\d+\.\d+\.exe$/;
+    if (!re.test(name)) {
+      setInstError('Filename must match: OPS_ROOM_Setup_X.Y.Z.exe');
+      return;
+    }
+    setInstFile(f);
+    setInstError('');
+    setInstResult(null);
   };
 
   const handleSubmit = async (e) => {
@@ -61,6 +83,34 @@ export default function Upload() {
     }
   };
 
+  const handleInstSubmit = async (e) => {
+    e.preventDefault();
+    if (!instFile) return;
+
+    setInstUploading(true);
+    setInstError('');
+    setInstResult(null);
+
+    const form = new FormData();
+    form.append('file', instFile);
+
+    try {
+      const resp = await fetch(INSTALLER_API, { method: 'POST', credentials: 'include', body: form });
+      const body = await resp.json();
+      if (!resp.ok) {
+        setInstError(body.detail || 'Upload failed');
+      } else {
+        setInstResult(body);
+        setInstFile(null);
+        if (instFileRef.current) instFileRef.current.value = '';
+      }
+    } catch {
+      setInstError('Network error during upload');
+    } finally {
+      setInstUploading(false);
+    }
+  };
+
   return (
     <div>
       <h1 className="page-title">/ UPLOAD RELEASE</h1>
@@ -69,6 +119,7 @@ export default function Upload() {
         <div className="card-head">UPLOAD → STAGE → PUBLISH</div>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
           Uploading saves the ZIP and stages it. The release is NOT available to users until you explicitly publish it from the Dashboard.
+          Optionally also upload the matching installer EXE (OPS_ROOM_Setup_X.Y.Z.exe) so installer-managed installs update via the installer.
         </p>
       </div>
 
@@ -133,6 +184,47 @@ export default function Upload() {
           </div>
         )}
       </form>
+
+      <div className="card mt-2" style={{ borderColor: 'rgba(77,195,255,0.25)', background: 'rgba(77,195,255,0.03)' }}>
+        <div className="card-head">INSTALLER (EXE) — OPTIONAL</div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+          Store the matching installer for the same version. Publishing then advertises it in update.json so
+          installer-managed installs update via the installer (loose-folder installs keep using the ZIP).
+        </p>
+        <form onSubmit={handleInstSubmit}>
+          <div
+            className={`upload-zone mb-2 ${instDragOver ? 'dragover' : ''}`}
+            style={{ minHeight: '4rem' }}
+            onDragOver={(e) => { e.preventDefault(); setInstDragOver(true); }}
+            onDragLeave={() => setInstDragOver(false)}
+            onDrop={(e) => { e.preventDefault(); setInstDragOver(false); handleInstFile(e.dataTransfer.files[0]); }}
+            onClick={() => instFileRef.current?.click()}
+          >
+            {instFile ? (
+              <p style={{ color: 'var(--acc)' }}>
+                <strong>{instFile.name}</strong><br />
+                {(instFile.size / (1024 * 1024)).toFixed(1)} MB
+              </p>
+            ) : (
+              <p>Drop the installer EXE here or click to select.<br />Filename: OPS_ROOM_Setup_X.Y.Z.exe</p>
+            )}
+            <input ref={instFileRef} type="file" accept=".exe" style={{ display: 'none' }} onChange={(e) => handleInstFile(e.target.files[0])} />
+          </div>
+          <button className="btn" type="submit" disabled={!instFile || instUploading}>
+            {instUploading ? 'Uploading...' : 'Upload installer'}
+          </button>
+          {instError && <div className="mt-1"><span className="badge badge-err">ERROR</span> {instError}</div>}
+          {instResult && (
+            <div className="card mt-1">
+              <div className="card-head">INSTALLER STORED</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+                {instResult.installer_filename} (v{instResult.version}, {instResult.installer_size_mb} MB) attached.
+                Publish the version to advertise it in update.json.
+              </div>
+            </div>
+          )}
+        </form>
+      </div>
     </div>
   );
 }

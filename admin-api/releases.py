@@ -6,6 +6,7 @@ Releases are tracked in releases.json (the catalog). Each entry has:
   - version, filename, sha256, size_mb, channel, codename, notes
   - state: draft | testing | published | archived
   - uploaded_by, uploaded_at, published_by, published_at
+  - installer_filename, installer_sha256, installer_size_mb (optional, #78)
 
 The live manifest (update.json) is written from the PUBLISHED entry.
 A separate testing manifest (update-testing.json) is written from TESTING.
@@ -48,6 +49,7 @@ _log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/releases", tags=["releases"])
 
 FILENAME_RE = re.compile(r"^OPS_ROOM_v\d+_\d+_\d+_Public_Windows_x64\.zip$")
+INSTALLER_RE = re.compile(r"^OPS_ROOM_Setup_\d+\.\d+\.\d+\.exe$")
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
 # Publish lock to prevent racing two publishes simultaneously.
@@ -125,16 +127,24 @@ def _build_manifest_from_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "notes": entry.get("notes") or f"Release v{version}",
         "release_notes_url": "https://opsroom.live/changelog",
     }
-    # Installer bridge (#78, Phase 1): when the matching Setup.exe sits in the
-    # releases dir, advertise it so installer-managed installs update via the
-    # installer (zip path stays for loose-folder installs). Old updaters ignore
-    # the additive fields; the app-side updater validates installer_url/installer_sha256.
-    installer_name = f"OPS_ROOM_Setup_{version}.exe"
+    # Installer bridge (#78, Phase 1): when the matching Setup.exe is present
+    # (tracked on the catalog entry, with a disk scan as fallback), advertise it
+    # so installer-managed installs update via the installer (zip path stays for
+    # loose-folder installs). Old updaters ignore the additive fields; the
+    # app-side updater validates installer_url/installer_sha256.
+    installer_name = entry.get("installer_filename") or f"OPS_ROOM_Setup_{version}.exe"
+    installer_sha = entry.get("installer_sha256") or ""
     installer_path = RELEASES_DIR / installer_name
-    if installer_path.is_file():
+    if not installer_sha:
+        try:
+            if installer_path.is_file():
+                installer_sha = _sha256_file(installer_path)
+        except Exception:
+            installer_sha = ""
+    if installer_sha and installer_path.is_file():
         try:
             manifest["installer_url"] = f"https://opsroom.live/downloads/{installer_name}"
-            manifest["installer_sha256"] = _sha256_file(installer_path)
+            manifest["installer_sha256"] = installer_sha
         except Exception:
             pass
     return manifest
@@ -279,7 +289,28 @@ async def list_releases(_session: dict = Depends(verify_session)):
                 continue
             stat = entry.stat()
             total_bytes += stat.st_size
-            zips.append({
+            info = {
+                "filename": entry.name,
+                "size_bytes": stat.st_size,
+                "size_mb": round(stat.st_size / (1024 * 1024), 1),
+                "modified": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+            }
+            version = entry.name.replace("OPS_ROOM_v", "").split("_Public")[0].replace("_", ".")
+            cat = next((c for c in catalog if c.get("version") == version), None)
+            if cat and cat.get("installer_filename"):
+                info["installer_filename"] = cat["installer_filename"]
+                info["installer_sha256"] = cat.get("installer_sha256", "")
+            zips.append(info)
+    except FileNotFoundError:
+        pass
+
+    installers: list[dict[str, Any]] = []
+    try:
+        for entry in sorted(RELEASES_DIR.iterdir(), key=lambda p: p.name, reverse=True):
+            if not entry.is_file() or not entry.name.endswith(".exe"):
+                continue
+            stat = entry.stat()
+            installers.append({
                 "filename": entry.name,
                 "size_bytes": stat.st_size,
                 "size_mb": round(stat.st_size / (1024 * 1024), 1),
@@ -314,6 +345,7 @@ async def list_releases(_session: dict = Depends(verify_session)):
         "catalog": catalog,
         "latest_symlink": latest,
         "zips": zips,
+        "installers": installers,
         "storage_total_mb": round(total_bytes / (1024 * 1024), 1),
         "storage_total_gb": round(total_bytes / (1024 * 1024 * 1024), 2),
         "last_actions": last_actions[:10],
@@ -420,6 +452,101 @@ async def upload_release(
         "size_mb": file_size_mb,
         "channel": channel,
         "message": "Release saved as draft. Use the Publish action to make it live.",
+    }
+
+
+@router.post("/upload-installer")
+async def upload_installer(
+    file: UploadFile = File(...),
+    _session: dict = Depends(verify_session),
+):
+    """Upload an OPS ROOM installer EXE and attach it to the matching version.
+
+    The EXE is saved on disk and recorded on the version's catalog entry
+    (installer_filename / installer_sha256 / installer_size_mb). Publishing
+    that version then advertises installer_url/installer_sha256 in update.json,
+    so installer-managed installs update via the installer (zip path stays for
+    loose-folder installs). Storing the installer is optional: publishing works
+    with the ZIP alone.
+    """
+    username = str(_session.get("sub") or "unknown")
+
+    ip = client_ip(request)
+    if not _rate_limit_upload(f"upload-installer:{ip}"):
+        raise HTTPException(status_code=429, detail="Too many uploads. Please wait a minute.")
+
+    if not file.filename or not INSTALLER_RE.match(file.filename):
+        raise HTTPException(status_code=400, detail="Invalid filename. Expected pattern: OPS_ROOM_Setup_X.Y.Z.exe")
+
+    filename = file.filename
+    dest = RELEASES_DIR / filename
+
+    digest = hashlib.sha256()
+    bytes_written = 0
+    max_bytes = MAX_UPLOAD_MB * 1024 * 1024
+
+    tmp = dest.with_suffix(".upload")
+    try:
+        with tmp.open("wb") as f:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                bytes_written += len(chunk)
+                if bytes_written > max_bytes:
+                    tmp.unlink(missing_ok=True)
+                    raise HTTPException(status_code=413, detail=f"File exceeds {MAX_UPLOAD_MB} MB limit")
+                digest.update(chunk)
+                f.write(chunk)
+
+        if bytes_written == 0:
+            tmp.unlink(missing_ok=True)
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+        os.replace(tmp, dest)
+    except HTTPException:
+        raise
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail="Failed to save uploaded file")
+
+    sha256 = digest.hexdigest()
+    size_mb = round(bytes_written / (1024 * 1024), 1)
+    version = filename.replace("OPS_ROOM_Setup_", "").replace(".exe", "")
+
+    # Attach to the version's catalog entry (create a bare draft if none yet).
+    catalog = _read_catalog()
+    entry = next((e for e in catalog if e.get("version") == version), None)
+    if not entry:
+        entry = {
+            "version": version,
+            "state": "draft",
+            "uploaded_by": username,
+            "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        }
+        catalog.append(entry)
+    entry["installer_filename"] = filename
+    entry["installer_sha256"] = sha256
+    entry["installer_size_mb"] = size_mb
+    _write_catalog(catalog)
+
+    _audit_log({
+        "action": "UPLOAD_INSTALLER",
+        "user": username,
+        "version": version,
+        "filename": filename,
+        "sha256": sha256[:16] + "...",
+        "size_mb": size_mb,
+        "result": "stored",
+    })
+
+    return {
+        "ok": True,
+        "version": version,
+        "installer_filename": filename,
+        "installer_sha256": sha256,
+        "installer_size_mb": size_mb,
+        "message": "Installer stored and attached to this version. Publish to advertise it in update.json.",
     }
 
 
@@ -630,6 +757,21 @@ async def rollback(
     with _publish_lock:
         backup = _backup_manifest("pre-rollback")
         manifest = _read_manifest()
+        # Keep the installer fields of the version being rolled back to, if the
+        # matching Setup.exe exists; otherwise drop them so the updater never
+        # sees a stale installer URL.
+        installer_name = f"OPS_ROOM_Setup_{version}.exe"
+        if (RELEASES_DIR / installer_name).is_file():
+            try:
+                manifest["installer_url"] = f"https://opsroom.live/downloads/{installer_name}"
+                manifest["installer_sha256"] = _sha256_file(RELEASES_DIR / installer_name)
+            except Exception:
+                manifest.pop("installer_url", None)
+                manifest.pop("installer_sha256", None)
+        else:
+            manifest.pop("installer_url", None)
+            manifest.pop("installer_sha256", None)
+
         manifest.update({
             "latest_version": version,
             "version": version,
@@ -667,9 +809,15 @@ async def rollback(
 @router.delete("/{version}")
 async def delete_release(
     version: str,
+    purge: bool = False,
     _session: dict = Depends(verify_session),
 ):
-    """Archive a release (does NOT delete the ZIP file)."""
+    """Archive a release by default (keeps the ZIP on disk).
+
+    With `?purge=true` the version is hard-deleted: its ZIP and installer EXE
+    are removed from disk and the catalog entry is dropped entirely. Use purge
+    only for stale/retracted releases that should no longer exist anywhere.
+    """
     username = str(_session.get("sub") or "unknown")
 
     if not VERSION_RE.match(version):
@@ -679,6 +827,27 @@ async def delete_release(
     entry = next((e for e in catalog if e.get("version") == version), None)
     if not entry:
         raise HTTPException(status_code=404, detail=f"Version {version} not found in catalog")
+
+    if purge:
+        removed: list[str] = []
+        for key in ("filename", "installer_filename"):
+            name = entry.get(key)
+            if name:
+                try:
+                    (RELEASES_DIR / name).unlink(missing_ok=True)
+                    removed.append(name)
+                except Exception:
+                    pass
+        catalog = [e for e in catalog if e.get("version") != version]
+        _write_catalog(catalog)
+        _audit_log({
+            "action": "PURGE_RELEASE",
+            "user": username,
+            "version": version,
+            "removed": removed,
+            "result": "success",
+        })
+        return {"ok": True, "status": "purged", "version": version, "removed": removed}
 
     for e in catalog:
         if e.get("version") == version:

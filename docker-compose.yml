@@ -131,16 +131,18 @@ services:
 
   # Self-hosted Umami analytics (v0.25.x): cookieless, GDPR-friendly, no
   # consent banner needed on the public site. The tracker script and its
-  # ingest endpoint are proxied same-origin by nginx (opsroom.live/umami.js
-  # and /api/send); the dashboard binds to localhost only and is reached
-  # via SSH tunnel or through the admin panel Analytics page (admin-api
-  # bridge). First-run setup: create the admin account + the opsroom.live
-  # website once, then fill UMAMI_USERNAME/PASSWORD/WEBSITE_ID in .env.
+  # ingest endpoint are proxied same-origin by nginx (opsroom.live/script.js
+  # and /api/send); v2.19.0 serves the tracker at /script.js (the old
+  # /umami.js path redirects). The dashboard binds to localhost only and is
+  # reached via SSH tunnel or through the admin panel Analytics page
+  # (admin-api bridge). First-run setup: create the admin account + the
+  # opsroom.live website once, then fill UMAMI_USERNAME/PASSWORD/WEBSITE_ID
+  # in .env (see DEPLOYMENT_UMAMI.md).
   #
   # PINNED to postgresql-v2.19.0 (final v2 release): `postgresql-latest`
   # now resolves to Umami v3, whose REST API changed (no /api/auth/setup,
   # new login/websites/stats shapes) and breaks the admin-api bridge and
-  # the setup curl in DEPLOYMENT_UMAMI.md. v2.19.0 is what everything here
+  # the setup flow in DEPLOYMENT_UMAMI.md. v2.19.0 is what everything here
   # was built and tested against. Revisit when the bridge is ported to v3.
   umami:
     image: ghcr.io/umami-software/umami:postgresql-v2.19.0

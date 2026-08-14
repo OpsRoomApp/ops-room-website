@@ -8,7 +8,7 @@ export default function Download() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('https://opsroom.live/api/update.json')
+    fetch('/api/update.json')
       .then((r) => (r.ok ? r.json() : Promise.reject(r)))
       .then((data) => {
         setManifest(data);
@@ -27,7 +27,7 @@ export default function Download() {
 
   const handleDownload = () => {
     if (downloadUrl) {
-      fetch('https://admin.opsroom.live/api/analytics/record', {
+      fetch('/api/analytics/record', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ version }),
@@ -144,26 +144,6 @@ export default function Download() {
             </div>
 
             <div className="dl-side">
-              <div className="panel">
-                <div className="panel-head"><span className="panel-title">VERIFICATION</span></div>
-                <div className="panel-body">
-                  <p className="muted">
-                    Every release is SHA256-verified against the manifest at{' '}
-                    <code>opsroom.live/api/update.json</code>. The updater validates checksums before
-                    installing.
-                  </p>
-                </div>
-              </div>
-              <div className="panel">
-                <div className="panel-head"><span className="panel-title">UPDATE CHANNEL</span></div>
-                <div className="panel-body">
-                  <p className="muted">
-                    OPS ROOM checks <code>opsroom.live/api/update.json</code> for new
-                    versions. If the server is unreachable, it falls back to the GitHub
-                    releases manifest automatically.
-                  </p>
-                </div>
-              </div>
               <div className="panel">
                 <div className="panel-head"><span className="panel-title">SUPPORT</span></div>
                 <div className="panel-body">
