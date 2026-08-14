@@ -20,7 +20,7 @@ export default function Health() {
       .then(([d, di]) => { setData(d); setDiag(di); setError(''); })
       .catch((err) => {
         console.error('Health check failed:', err);
-        setError(err?.status ? `Health check failed (HTTP ${err.status})` : 'Health check failed — is the admin API running?');
+        setError(err?.status ? `Health check failed (HTTP ${err.status})` : 'Health check failed - is the admin API running?');
       })
       .finally(() => setLoading(false));
   }, [tab]);

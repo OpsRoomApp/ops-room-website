@@ -448,8 +448,8 @@ export default function DiscordAdmin() {
               <div className="card-head">TICKET VOLUME (14d)</div>
               <SimpleBarChart data={ticketAnalytics?.volume_by_day} labelKey="day" valueKey="count" accent="var(--amber)" />
               <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-                <div className="dim" style={{ fontSize: '0.7rem' }}>Avg claim: <b style={{ color: 'var(--text)' }}>{ticketAnalytics?.avg_time_to_claim_minutes ?? '—'} min</b></div>
-                <div className="dim" style={{ fontSize: '0.7rem' }}>Avg close: <b style={{ color: 'var(--text)' }}>{ticketAnalytics?.avg_time_to_close_minutes ?? '—'} min</b></div>
+                <div className="dim" style={{ fontSize: '0.7rem' }}>Avg claim: <b style={{ color: 'var(--text)' }}>{ticketAnalytics?.avg_time_to_claim_minutes ?? '-'} min</b></div>
+                <div className="dim" style={{ fontSize: '0.7rem' }}>Avg close: <b style={{ color: 'var(--text)' }}>{ticketAnalytics?.avg_time_to_close_minutes ?? '-'} min</b></div>
                 <div className="dim" style={{ fontSize: '0.7rem' }}>Closed w/ reason: <b style={{ color: 'var(--text)' }}>{ticketAnalytics?.closed_with_reason ?? 0}</b></div>
               </div>
             </div>
@@ -596,7 +596,7 @@ export default function DiscordAdmin() {
                     </div>
                   ) : (
                     <div className="dim" style={{ fontSize: '0.7rem', marginTop: '0.3rem' }}>
-                      Reviewed {a.reviewed_at?.slice(0, 19)}{a.resolution ? ` — ${a.resolution}` : ''}
+                      Reviewed {a.reviewed_at?.slice(0, 19)}{a.resolution ? ` - ${a.resolution}` : ''}
                     </div>
                   )}
                 </div>
@@ -640,7 +640,7 @@ export default function DiscordAdmin() {
                   <button className="btn btn-sm" style={{ color: 'var(--red)' }} onClick={() => handleAllowlistRemove(e.provider, e.identifier)}>Remove</button>
                 </div>
               ))}
-              {(allowlist || []).length === 0 && <div className="dim" style={{ padding: '0.5rem 0', fontSize: '0.75rem' }}>Allowlist is empty — env vars (APPROVED_GITHUB_USERS / APPROVED_DISCORD_USERS) seed it on first boot.</div>}
+              {(allowlist || []).length === 0 && <div className="dim" style={{ padding: '0.5rem 0', fontSize: '0.75rem' }}>Allowlist is empty - env vars (APPROVED_GITHUB_USERS / APPROVED_DISCORD_USERS) seed it on first boot.</div>}
             </div>
           </div>
         </>

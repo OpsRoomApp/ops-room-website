@@ -22,7 +22,7 @@ function MessageRow({ msg }) {
         ))}
         {(msg.embeds || []).map((e, i) => (
           <div key={i} style={{ borderLeft: '3px solid var(--acc)', paddingLeft: '0.6rem', marginTop: '0.3rem', color: 'var(--fg-soft)' }}>
-            <b>{e.title || 'Embed'}</b>{e.description ? ` — ${e.description}` : ''}
+            <b>{e.title || 'Embed'}</b>{e.description ? ` - ${e.description}` : ''}
           </div>
         ))}
       </div>
@@ -34,7 +34,7 @@ function MetaItem({ label, value }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.08em', color: 'var(--fg-muted)', textTransform: 'uppercase' }}>{label}</span>
-      <span style={{ fontSize: '13px', color: 'var(--fg)' }}>{value || '—'}</span>
+      <span style={{ fontSize: '13px', color: 'var(--fg)' }}>{value || '-'}</span>
     </div>
   );
 }

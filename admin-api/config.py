@@ -54,6 +54,20 @@ ANALYTICS_RETENTION_DAYS = int(os.getenv("ANALYTICS_RETENTION_DAYS", "90"))
 # v0.25.55 -- Transcript retention (C1)
 TRANSCRIPT_RETENTION_DAYS = int(os.getenv("TRANSCRIPT_RETENTION_DAYS", "14"))
 
+# ---- Bug reports (v0.25.x) ----
+# Shared ingest secret shipped inside the desktop binary. It is a spam gate,
+# not a real credential (anyone with the app can read it) - the per-IP rate
+# limit below is the primary defense. Rotating it requires shipping a matching
+# desktop build, so keep the default in sync with app/bug_report.py:
+# DEFAULT_SECRET in the ops-room-private-development repo.
+BUG_REPORT_SECRET = os.getenv(
+    "BUG_REPORT_SECRET",
+    "e7eb1adf7e094220a3f5ad89fcf6d01ce4194a0fe4b2452f9415b97d808bbbab",
+).strip()
+BUG_REPORTS_DB = Path(os.getenv("BUG_REPORTS_DB", "/opt/opsroom-bug-reports/bug_reports.sqlite3"))
+BUG_REPORTS_STORAGE_DIR = Path(os.getenv("BUG_REPORTS_STORAGE_DIR", "/opt/opsroom-bug-reports"))
+BUG_REPORTS_RATE_LIMIT_PER_MIN = int(os.getenv("BUG_REPORTS_RATE_LIMIT_PER_MIN", "10"))
+
 # v0.25.55 -- Discord OAuth (C3)
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")

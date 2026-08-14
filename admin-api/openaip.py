@@ -46,7 +46,7 @@ OPENAIP_PROXY_TOKEN = os.environ.get("OPENAIP_PROXY_TOKEN", "").strip()
 
 if not OPENAIP_API_KEY:
     _log.warning(
-        "OpenAIP API key not configured — set OPENAIP_API_KEY. "
+        "OpenAIP API key not configured - set OPENAIP_API_KEY. "
         "The airspace proxy returns 502 until it is provided."
     )
 

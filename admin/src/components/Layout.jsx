@@ -42,6 +42,7 @@ export default function Layout() {
           <NavLink to="/discord-audit">Audit Log</NavLink>
           <NavLink to="/audit">Audit</NavLink>
           <NavLink to="/support">Support</NavLink>
+          <NavLink to="/bug-reports">Bug Reports</NavLink>
         </nav>
         <div className="admin-user">
           {user.avatar && <img src={user.avatar} alt="" />}

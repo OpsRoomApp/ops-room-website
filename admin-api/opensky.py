@@ -28,7 +28,7 @@ OPENSKY_CLIENT_SECRET = os.environ.get("OPENSKY_CLIENT_SECRET", "")
 
 if not OPENSKY_CLIENT_ID or not OPENSKY_CLIENT_SECRET:
     _log.warning(
-        "OpenSky credentials not configured — set OPENSKY_CLIENT_ID and "
+        "OpenSky credentials not configured - set OPENSKY_CLIENT_ID and "
         "OPENSKY_CLIENT_SECRET in the environment.  Real-world flight "
         "search will return 502 until credentials are provided."
     )
@@ -41,7 +41,7 @@ _CACHE_TTL: float = 60.0  # seconds
 # Best-effort local cache mapping ICAO24 hex codes to ICAO aircraft type
 # designators (e.g. "A320", "B738", "B77W").  Populated from OpenSky's
 # public aircraft database.  Entries whose type is not yet known simply
-# pass through unfiltered — no flight is silently dropped because of a
+# pass through unfiltered - no flight is silently dropped because of a
 # missing lookup entry.
 #
 # Format: icao24 (6-char upper hex) → type code (3-4 char upper ICAO)
@@ -74,7 +74,7 @@ _AIRCRAFT_TYPES: dict[str, str] = {
 
 def _lookup_aircraft_type(icao24: str) -> str | None:
     """Best-effort ICAO24 → aircraft type code lookup.  Returns None when
-    the type is unknown — callers should NOT filter out those flights."""
+    the type is unknown - callers should NOT filter out those flights."""
     if not icao24:
         return None
     return _AIRCRAFT_TYPES.get(icao24.strip().upper()[:6])
@@ -214,7 +214,7 @@ async def realworld_search(
         # ── Global callsign search (no origin airport) ─────────────
         # /states/all returns ALL currently airborne ADS-B vectors.
         # Index [2] is *origin_country* (e.g. "Germany"), NOT an airport
-        # ICAO — we deliberately do NOT display country strings as airport
+        # ICAO - we deliberately do NOT display country strings as airport
         # codes.  Use '----' when the origin airport is unknown.
         async with httpx.AsyncClient(timeout=10.0) as client:
             token = await _get_opensky_token(client)

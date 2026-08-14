@@ -13,7 +13,7 @@ const PERIODS = [
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 function fmtRate(value) {
-  if (value === null || value === undefined) return '—';
+  if (value === null || value === undefined) return '-';
   return `${Math.round(value)} fpm`;
 }
 
@@ -36,7 +36,7 @@ export default function Leaderboard() {
             <h2 className="section-title">Flight leaderboard.</h2>
             <p className="section-subtitle">
               Ranked from flights logged by OPS ROOM pilots who opted into public
-              visibility. Landing rate is the softest touchdown — the higher
+              visibility. Landing rate is the softest touchdown - the higher
               (closer to zero fpm), the better.
             </p>
           </div>

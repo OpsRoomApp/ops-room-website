@@ -1,4 +1,4 @@
-# OPS ROOM v0.25.55 — VPS Deployment Runbook
+# OPS ROOM v0.25.55 - VPS Deployment Runbook
 
 Covers three components deployed from two repos:
 
@@ -22,7 +22,7 @@ Docker network (`opsroom-net`); the bot runs as its own standalone compose proje
 - Recommended directory layout (used by the compose mounts):
 
 ```
-/opt/ops-control-bot/        # bot repo checkout  (MUST be here — see §5 path agreement)
+/opt/ops-control-bot/        # bot repo checkout  (MUST be here - see §5 path agreement)
 /opt/opsroom-website/        # website repo checkout
 /opt/opsroom-releases/       # release artifacts (update.json + installers), mounted read-only
 /opt/opsroom-transcripts/    # hosted ticket transcript storage (shared volume)
@@ -45,16 +45,16 @@ sudo mkdir -p /opt/opsroom-releases /opt/opsroom-transcripts /opt/opsroom/certbo
 4. **OAuth2** tab → copy Client ID (`DISCORD_CLIENT_ID`) and Client Secret
    (`DISCORD_CLIENT_SECRET`).
 
-> **Bot token vs client secret — not the same thing.** The **bot token**
+> **Bot token vs client secret - not the same thing.** The **bot token**
 > (`DISCORD_TOKEN`) authenticates the bot as the bot *user* (gateway + all
 > commands) and lives in the **bot** `.env`. The **client secret**
 > (`DISCORD_CLIENT_SECRET`) is an OAuth2 credential used *only* by the admin
 > panel's "Sign in with Discord" button (it is never read by the bot) and lives
 > in the **website** `.env`. Discord only ever *shows* the client secret once
-> at creation — to see it again you must click **Reset Secret**, which is safe:
+> at creation - to see it again you must click **Reset Secret**, which is safe:
 > it does not touch the bot token, the bot keeps running, and no prior admin
 > sessions are invalidated (only future OAuth logins use the new secret). Since
-> v0.25.55 is not deployed yet, resetting now breaks nothing — just copy the
+> v0.25.55 is not deployed yet, resetting now breaks nothing - just copy the
 > new value straight into `opsroom-website/.env` and keep it out of git.
 
 5. Invite the bot to the guild with the needed permissions (Manage Channels,
@@ -92,7 +92,7 @@ OWNER_USER_ID=           # Your Discord user ID
 ARRIVALS_CHANNEL_ID=     # Welcome-message channel ID
 ```
 
-**Strongly recommended** (tickets, beta, audit — see `.env.example` for current IDs):
+**Strongly recommended** (tickets, beta, audit - see `.env.example` for current IDs):
 `DISCORD_ANNOUNCEMENT_CHANNEL`, `LOG_CHANNEL_ID`, `SUPPORT_CATEGORY_ID`,
 `BUG_REPORTS_CHANNEL_ID`, `TICKET_TRANSCRIPT_CHANNEL_ID`,
 `SUPPORT_DISPATCH_ROLE_ID`, `MODERATOR_ROLE_ID`, `OPS_CONTROL_ROLE_ID`,
@@ -147,7 +147,7 @@ docker compose logs -f bot        # Ctrl-C to detach
 Healthy startup shows: DB schema verified, migrations run, moderation / roles /
 vatsim_events cogs loaded, pending-action poller started. Any
 `AttributeError: 'Config' object has no attribute ...` on startup means the
-installed source is older than v0.25.55 — update the checkout.
+installed source is older than v0.25.55 - update the checkout.
 
 ### 4.3 Verify the bot
 
@@ -261,7 +261,7 @@ docker exec opsroom-website nginx -s reload
 ```
 
 If the certificate does not yet exist when the container first starts, nginx will
-fail to bind 443 — restart the container after issuing the cert:
+fail to bind 443 - restart the container after issuing the cert:
 `docker compose restart opsroom-website`.
 
 ---
@@ -290,7 +290,7 @@ curl -fsS https://opsroom.live/health                  # main site health
 docker exec opsroom-admin-api python -c "import sqlite3;c=sqlite3.connect('/ops-control-data/ops-control.db');print(c.execute('select provider,identifier from staff_allowlist').fetchall())"
 ```
 
-### 6.3 Hosted ticket transcript (B1/C1) — end-to-end
+### 6.3 Hosted ticket transcript (B1/C1) - end-to-end
 
 1. In Discord: create a support ticket → staff clicks **Claim** → **Close** and
    enters a close reason.
@@ -341,7 +341,7 @@ Expect no `admin-api unreachable` / `admin-api rejected (401)` lines after the
 
 ## 7. Operations notes
 
-- **Backups** — before every upgrade, back up the bot DB and the transcript dir:
+- **Backups** - before every upgrade, back up the bot DB and the transcript dir:
 
 ```bash
 cp /opt/ops-control-bot/data/ops-control.db /opt/ops-control-bot/data/ops-control.db.bak-$(date +%F)

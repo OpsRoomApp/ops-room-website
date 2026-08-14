@@ -72,6 +72,13 @@ services:
       - TRANSCRIPT_RETENTION_DAYS=${TRANSCRIPT_RETENTION_DAYS:-14}
       - ADMIN_API_TOKEN=${ADMIN_API_TOKEN:-}
       - TRANSCRIPT_STORAGE_PATH=/opt/opsroom-transcripts
+      # Bug reports (v0.25.x): SQLite DB + diagnostics ZIPs received from the
+      # desktop app's in-app Report Bug flow. The secret default matches the
+      # value shipped in the desktop binary (app/bug_report.py DEFAULT_SECRET).
+      - BUG_REPORT_SECRET=${BUG_REPORT_SECRET:-e7eb1adf7e094220a3f5ad89fcf6d01ce4194a0fe4b2452f9415b97d808bbbab}
+      - BUG_REPORTS_DB=/opt/opsroom-bug-reports/bug_reports.sqlite3
+      - BUG_REPORTS_STORAGE_DIR=/opt/opsroom-bug-reports
+      - BUG_REPORTS_RATE_LIMIT_PER_MIN=${BUG_REPORTS_RATE_LIMIT_PER_MIN:-10}
       # Path to the OPS CONTROL bot SQLite database. When set, the Discord
       # admin endpoints read live bot data. Optional -- the API starts
       # without it and reports the bot database as unavailable.
@@ -88,6 +95,8 @@ services:
       - /opt/opsroom-notams:/opt/opsroom-notams
       # RainViewer precipitation tile cache (server-cached proxy, v0.25.80).
       - /opt/opsroom-rainviewer:/opt/opsroom-rainviewer
+      # Bug report storage: SQLite DB + diagnostics ZIPs (v0.25.x).
+      - /opt/opsroom-bug-reports:/opt/opsroom-bug-reports
     networks:
       - opsroom-net
     healthcheck:

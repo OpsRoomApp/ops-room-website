@@ -42,9 +42,24 @@ function tooltipHtml(f) {
   );
 }
 
-// #103: aircraft marker — a plane glyph rotated by live heading. Heading is
+// #103: aircraft marker - a plane glyph rotated by live heading. Heading is
 // degrees true from the telemetry feed; the icon's inner SVG is rotated via
 // CSS so Leaflet's divIcon can update it cheaply on every feed tick.
+// #111: dotted FMS-style route line between SimBrief navlog waypoints.
+const ROUTE_STYLE = { color: '#4dc3ff', weight: 2, opacity: 0.85, dashArray: '5 9', lineJoin: 'round' };
+function routePoints(f) {
+  const r = f.route;
+  if (!Array.isArray(r) || r.length < 2) return null;
+  const pts = [];
+  for (const p of r) {
+    if (Array.isArray(p) && p.length >= 2) {
+      const lat = Number(p[0]); const lon = Number(p[1]);
+      if (Number.isFinite(lat) && Number.isFinite(lon)) pts.push([lat, lon]);
+    }
+  }
+  return pts.length >= 2 ? pts : null;
+}
+
 const PLANE_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>';
 
@@ -69,6 +84,7 @@ export default function CommunityMap() {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef({});
+  const routesRef = useRef({});   // #111: dashed SimBrief route polylines per flight
   const fittedRef = useRef(false);
 
   // Initialise the Leaflet map once.
@@ -97,6 +113,7 @@ export default function CommunityMap() {
       }
       mapRef.current = null;
       markersRef.current = {};
+      routesRef.current = {};
       fittedRef.current = false;
     };
   }, []);
@@ -125,11 +142,30 @@ export default function CommunityMap() {
           .bindTooltip(tooltipHtml(f), { direction: 'top', offset: [0, -14], opacity: 0.95 });
         markersRef.current[id] = marker;
       }
+      // #111: dotted SimBrief route line under the marker.
+      const pts = routePoints(f);
+      const routeLayer = routesRef.current[id];
+      if (pts) {
+        if (routeLayer) {
+          routeLayer.setLatLngs(pts);
+        } else {
+          routesRef.current[id] = L.polyline(pts, ROUTE_STYLE).addTo(map);
+        }
+      } else if (routeLayer) {
+        map.removeLayer(routeLayer);
+        delete routesRef.current[id];
+      }
     }
     for (const id of Object.keys(markersRef.current)) {
       if (!live.has(id)) {
         map.removeLayer(markersRef.current[id]);
         delete markersRef.current[id];
+      }
+    }
+    for (const id of Object.keys(routesRef.current)) {
+      if (!live.has(id)) {
+        map.removeLayer(routesRef.current[id]);
+        delete routesRef.current[id];
       }
     }
     if (!fittedRef.current && live.size > 0) {

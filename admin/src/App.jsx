@@ -14,6 +14,7 @@ import DiscordAdmin from './pages/DiscordAdmin.jsx';
 import DiscordUsers from './pages/DiscordUsers.jsx';
 import BetaTesters from './pages/BetaTesters.jsx';
 import DiscordAudit from './pages/DiscordAudit.jsx';
+import BugReports from './pages/BugReports.jsx';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="discord-users" element={<DiscordUsers />} />
             <Route path="beta-testers" element={<BetaTesters />} />
             <Route path="discord-audit" element={<DiscordAudit />} />
+            <Route path="bug-reports" element={<BugReports />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -26,6 +26,7 @@ import transcripts  # v0.25.55 (C1)
 import appeals     # v0.25.55 (C4)
 import discord
 import community   # community flight events + leaderboard + live feed
+import bug_reports  # v0.25.x: desktop app bug report ingest + admin panel
 
 app = FastAPI(title="OPS ROOM Admin API")
 
@@ -63,6 +64,10 @@ async def _startup() -> None:
         allowlist.seed_from_env()
     except Exception:
         pass
+    try:
+        bug_reports.init_db()
+    except Exception:
+        pass
 
 # CORS: allow admin frontend, main website, and desktop app (localhost).
 app.add_middleware(
@@ -96,6 +101,7 @@ app.include_router(transcripts.router)
 app.include_router(appeals.router)
 app.include_router(discord.router)
 app.include_router(community.router)
+app.include_router(bug_reports.router)
 
 
 @app.get("/api/ping")

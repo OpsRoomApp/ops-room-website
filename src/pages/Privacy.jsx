@@ -37,12 +37,12 @@ export default function Privacy() {
               <h2>Opt-in integrations that transmit data</h2>
               <p>OPS ROOM can connect to third-party services. Each one is <strong>opt-in</strong> and disabled by default. Data is only sent when you choose to enable the integration:</p>
               <ul>
-                <li><strong>VATSIM</strong> — Your simulator sends position data to the VATSIM network when you connect. OPS ROOM reads VATSIM traffic data for the FIDS and Live Map modules. No data is sent to VATSIM by OPS ROOM itself.</li>
-                <li><strong>SimBrief</strong> — OPS ROOM fetches your OFP, weather, and NOTAMs from SimBrief using your SimBrief username or pilot ID. No flight data is sent back.</li>
-                <li><strong>Hoppie CPDLC</strong> — CPDLC messages are routed through the Hoppie ACARS network using your Hoppie logon code. Message content is determined by your simulator and the ATC network.</li>
-                <li><strong>GSX Pro</strong> — OPS ROOM controls GSX ground services locally through the GSX menu system. No data leaves your machine.</li>
-                <li><strong>ChartFox</strong> — If you connect a ChartFox account, OPS ROOM authenticates via OAuth and fetches chart PDFs for display. Your ChartFox credentials are never stored by OPS ROOM.</li>
-                <li><strong>Navigraph</strong> — If you connect a Navigraph account, OPS ROOM fetches Jeppesen charts for display. Your Navigraph credentials are never stored by OPS ROOM.</li>
+                <li><strong>VATSIM</strong> - Your simulator sends position data to the VATSIM network when you connect. OPS ROOM reads VATSIM traffic data for the FIDS and Live Map modules. No data is sent to VATSIM by OPS ROOM itself.</li>
+                <li><strong>SimBrief</strong> - OPS ROOM fetches your OFP, weather, and NOTAMs from SimBrief using your SimBrief username or pilot ID. No flight data is sent back.</li>
+                <li><strong>Hoppie CPDLC</strong> - CPDLC messages are routed through the Hoppie ACARS network using your Hoppie logon code. Message content is determined by your simulator and the ATC network.</li>
+                <li><strong>GSX Pro</strong> - OPS ROOM controls GSX ground services locally through the GSX menu system. No data leaves your machine.</li>
+                <li><strong>ChartFox</strong> - If you connect a ChartFox account, OPS ROOM authenticates via OAuth and fetches chart PDFs for display. Your ChartFox credentials are never stored by OPS ROOM.</li>
+                <li><strong>Navigraph</strong> - If you connect a Navigraph account, OPS ROOM fetches Jeppesen charts for display. Your Navigraph credentials are never stored by OPS ROOM.</li>
               </ul>
             </div>
 

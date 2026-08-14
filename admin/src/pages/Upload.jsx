@@ -125,7 +125,7 @@ export default function Upload() {
         {error && <div className="mt-1"><span className="badge badge-err">ERROR</span> {error}</div>}
         {result && (
           <div className="card mt-1">
-            <div className="card-head">UPLOAD COMPLETE — STAGED</div>
+            <div className="card-head">UPLOAD COMPLETE - STAGED</div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
               Version {result.version} staged. Go to the Dashboard to publish.
             </div>

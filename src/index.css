@@ -974,7 +974,7 @@ h3 { font-size: 1rem; }
 
 
 /* ========================================================================
-   RESPONSIVE POLISH PASS — mobile / tablet / desktop / iPad
+   RESPONSIVE POLISH PASS - mobile / tablet / desktop / iPad
    Additive only; preserves every existing rule.
    ======================================================================== */
 
@@ -1017,7 +1017,7 @@ h3 { font-size: 1rem; }
 
 /* ----- Status strip: clean up at narrow widths ----- */
 @media (max-width: 980px) {
-  /* Hide the Zulu clock below this width — it crowds the row */
+  /* Hide the Zulu clock below this width - it crowds the row */
   .ss-zulu { display: none; }
 }
 @media (max-width: 768px) {

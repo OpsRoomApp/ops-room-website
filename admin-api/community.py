@@ -110,7 +110,7 @@ def _ensure_tables(conn: sqlite3.Connection) -> None:
             touchdown_speed  REAL,
             duration_min     REAL,
             score            REAL,
-            visibility       TEXT NOT NULL DEFAULT 'discord',
+            visibility       TEXT NOT NULL DEFAULT 'public',
             created_at       TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS community_live (
@@ -126,14 +126,15 @@ def _ensure_tables(conn: sqlite3.Connection) -> None:
             altitude_ft  REAL,
             ground_speed REAL,
             heading      REAL,
-            visibility   TEXT NOT NULL DEFAULT 'discord',
+            route        TEXT,
+            visibility   TEXT NOT NULL DEFAULT 'public',
             last_seen    TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS app_links (
             discord_id  INTEGER PRIMARY KEY,
             app_token   TEXT NOT NULL,
             username    TEXT,
-            visibility  TEXT NOT NULL DEFAULT 'discord',
+            visibility  TEXT NOT NULL DEFAULT 'public',
             created_at  TEXT NOT NULL,
             updated_at  TEXT
         );
@@ -145,6 +146,11 @@ def _ensure_tables(conn: sqlite3.Connection) -> None:
         cols = {r["name"] for r in conn.execute("PRAGMA table_info(community_live)").fetchall()}
         if "heading" not in cols:
             conn.execute("ALTER TABLE community_live ADD COLUMN heading REAL")
+            conn.commit()
+        # #111: route column (JSON-encoded [lat, lon] pairs from the SimBrief
+        # navlog) for the website's dotted route line.
+        if "route" not in cols:
+            conn.execute("ALTER TABLE community_live ADD COLUMN route TEXT")
             conn.commit()
     except Exception:
         pass
@@ -280,7 +286,7 @@ async def community_connect_callback(request: Request, code: str = "", state: st
         conn.execute(
             """
             INSERT INTO app_links (discord_id, app_token, username, visibility, created_at, updated_at)
-            VALUES (?, ?, ?, 'discord', ?, ?)
+            VALUES (?, ?, ?, 'public', ?, ?)
             ON CONFLICT(discord_id) DO UPDATE SET
                 app_token = excluded.app_token,
                 username = excluded.username,
@@ -388,8 +394,8 @@ async def community_live(request: Request):
             """
             INSERT INTO community_live
                 (discord_id, callsign, aircraft, registration, origin, destination,
-                 phase, latitude, longitude, altitude_ft, ground_speed, heading, visibility, last_seen)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 phase, latitude, longitude, altitude_ft, ground_speed, heading, route, visibility, last_seen)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(discord_id) DO UPDATE SET
                 callsign = excluded.callsign,
                 aircraft = excluded.aircraft,
@@ -402,6 +408,7 @@ async def community_live(request: Request):
                 altitude_ft = excluded.altitude_ft,
                 ground_speed = excluded.ground_speed,
                 heading = excluded.heading,
+                route = excluded.route,
                 visibility = excluded.visibility,
                 last_seen = excluded.last_seen
             """,
@@ -418,6 +425,7 @@ async def community_live(request: Request):
                 body.get("altitude_ft"),
                 body.get("ground_speed_kts"),
                 body.get("heading"),
+                json.dumps(body.get("route") or []),
                 visibility,
                 _now_iso(),
             ),
@@ -488,6 +496,9 @@ async def community_live_feed():
                 "altitude_ft": r["altitude_ft"],
                 "ground_speed_kts": r["ground_speed"],
                 "heading": r["heading"],
+                # #111: expose the SimBrief navlog route (JSON [lat, lon] pairs)
+                # so the map can draw the dotted route line.
+                "route": json.loads(r["route"]) if r["route"] else [],
                 "last_seen": r["last_seen"],
             }
             for r in rows

@@ -156,7 +156,7 @@ export default function Home() {
             <h2 className="section-title">Who's flying OPS ROOM right now.</h2>
             <p className="section-subtitle">
               Live community flights and the all-time leaderboard. Every pilot
-              here explicitly opted into public visibility — nothing leaves the
+              here explicitly opted into public visibility - nothing leaves the
               sim without consent.
             </p>
           </div>
