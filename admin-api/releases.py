@@ -15,7 +15,6 @@ DRAFT entries are invisible to users.
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import logging
@@ -34,7 +33,6 @@ from clientip import client_ip
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from auth import verify_session
-from discord_webhooks import notify_release
 from config import (
     LOG_FILE,
     MANIFEST_BACKUP_DIR,
@@ -756,12 +754,9 @@ async def publish_release(request: Request, _session: dict = Depends(verify_sess
         "backup": str(backup),
     })
 
-    # Instant Discord notifications (#release-notes + #downloads). Fire and
-    # forget so publish latency is unaffected; each webhook posts are best-effort.
-    try:
-        asyncio.get_running_loop().create_task(notify_release(entry, manifest))
-    except Exception:
-        pass
+    # Discord announcements (#release-notes + #downloads) are handled by the
+    # OPS CONTROL bot: it polls GET /api/public/releases and posts new
+    # releases as itself. Nothing to do here at publish time.
 
     return {
         "ok": True,

@@ -169,8 +169,8 @@ export default function Upload() {
           <label>Release notes (Markdown)</label>
           <ReleaseNotesEditor value={notes} onChange={setNotes} />
           <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '0.35rem' }}>
-            The same notes feed the website changelog, the Discord bot and the instant
-            Discord posts on publish. Pasted markdown is rendered safely.
+            The same notes feed the website changelog and the Discord bot, which posts
+            new releases to #release-notes and #downloads as itself. Pasted markdown is rendered safely.
           </p>
         </div>
 

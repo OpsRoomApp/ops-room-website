@@ -119,10 +119,3 @@ UMAMI_API_URL = os.getenv("UMAMI_API_URL", "http://umami:3000").strip()
 UMAMI_USERNAME = os.getenv("UMAMI_USERNAME", "").strip()
 UMAMI_PASSWORD = os.getenv("UMAMI_PASSWORD", "").strip()
 UMAMI_WEBSITE_ID = os.getenv("UMAMI_WEBSITE_ID", "").strip()
-
-# ---- Discord release notifications (incoming webhooks) ----
-# Fired from publish_release the instant a release goes live. Empty URL =
-# that channel's post is disabled. Webhooks need no bot permissions and are
-# non-blocking (fire-and-forget tasks).
-DISCORD_RELEASE_WEBHOOK_URL = os.getenv("DISCORD_RELEASE_WEBHOOK_URL", "").strip()
-DISCORD_DOWNLOADS_WEBHOOK_URL = os.getenv("DISCORD_DOWNLOADS_WEBHOOK_URL", "").strip()

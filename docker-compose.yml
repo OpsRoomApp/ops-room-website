@@ -100,12 +100,6 @@ services:
       - UMAMI_USERNAME=${UMAMI_USERNAME:-}
       - UMAMI_PASSWORD=${UMAMI_PASSWORD:-}
       - UMAMI_WEBSITE_ID=${UMAMI_WEBSITE_ID:-}
-      # Discord release notifications (v0.25.x): incoming webhooks fired from
-      # publish_release. DISCORD_RELEASE_WEBHOOK_URL posts the formatted release
-      # note to #release-notes; DISCORD_DOWNLOADS_WEBHOOK_URL posts the direct
-      # download links to #downloads. Empty = that post is disabled.
-      - DISCORD_RELEASE_WEBHOOK_URL=${DISCORD_RELEASE_WEBHOOK_URL:-}
-      - DISCORD_DOWNLOADS_WEBHOOK_URL=${DISCORD_DOWNLOADS_WEBHOOK_URL:-}
       # Path to the OPS CONTROL bot SQLite database. When set, the Discord
       # admin endpoints read live bot data. Optional -- the API starts
       # without it and reports the bot database as unavailable.

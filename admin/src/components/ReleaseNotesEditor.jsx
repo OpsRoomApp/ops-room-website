@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-// Shared with admin-api (discord_webhooks.py) and the Discord bot
-// (ops-control-bot cogs/releases.py). Keep in sync by contract.
+// Shared with the Discord bot (ops-control-bot cogs/releases.py), which
+// posts new releases to #release-notes and #downloads as itself. Keep in
+// sync by contract.
 const DISCORD_BUDGET = 1000;
 
 export function formatNotesForDiscord(md, limit = DISCORD_BUDGET) {
