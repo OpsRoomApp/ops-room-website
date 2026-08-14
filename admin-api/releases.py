@@ -121,7 +121,8 @@ def _build_manifest_from_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "mandatory": entry.get("mandatory", False),
         "download_url": f"https://opsroom.live/downloads/{filename}",
         "url": f"https://opsroom.live/downloads/{filename}",
-        "fallback_download_url": f"https://github.com/OpsRoomApp/ops-room-releases/releases/download/v{version}/{filename}",
+        # GitHub fallback: the release tag is the plain version (no 'v' prefix).
+        "fallback_download_url": f"https://github.com/OpsRoomApp/ops-room-releases/releases/download/{version}/{filename}",
         "sha256": sha256,
         "message": f"OPS ROOM v{version} is available.",
         "notes": entry.get("notes") or f"Release v{version}",
@@ -145,6 +146,9 @@ def _build_manifest_from_entry(entry: dict[str, Any]) -> dict[str, Any]:
         try:
             manifest["installer_url"] = f"https://opsroom.live/downloads/{installer_name}"
             manifest["installer_sha256"] = installer_sha
+            # Same bytes on GitHub Releases, so the checksum is identical.
+            manifest["fallback_installer_url"] = f"https://github.com/OpsRoomApp/ops-room-releases/releases/download/{version}/{installer_name}"
+            manifest["fallback_installer_sha256"] = installer_sha
         except Exception:
             pass
     return manifest
@@ -763,20 +767,28 @@ async def rollback(
         installer_name = f"OPS_ROOM_Setup_{version}.exe"
         if (RELEASES_DIR / installer_name).is_file():
             try:
+                installer_sha = _sha256_file(RELEASES_DIR / installer_name)
                 manifest["installer_url"] = f"https://opsroom.live/downloads/{installer_name}"
-                manifest["installer_sha256"] = _sha256_file(RELEASES_DIR / installer_name)
+                manifest["installer_sha256"] = installer_sha
+                manifest["fallback_installer_url"] = f"https://github.com/OpsRoomApp/ops-room-releases/releases/download/{version}/{installer_name}"
+                manifest["fallback_installer_sha256"] = installer_sha
             except Exception:
                 manifest.pop("installer_url", None)
                 manifest.pop("installer_sha256", None)
+                manifest.pop("fallback_installer_url", None)
+                manifest.pop("fallback_installer_sha256", None)
         else:
             manifest.pop("installer_url", None)
             manifest.pop("installer_sha256", None)
+            manifest.pop("fallback_installer_url", None)
+            manifest.pop("fallback_installer_sha256", None)
 
         manifest.update({
             "latest_version": version,
             "version": version,
             "download_url": f"https://opsroom.live/downloads/{target.name}",
             "url": f"https://opsroom.live/downloads/{target.name}",
+            "fallback_download_url": f"https://github.com/OpsRoomApp/ops-room-releases/releases/download/{version}/{target.name}",
             "sha256": sha256,
             "message": f"OPS ROOM v{version} (rolled back).",
             "notes": manifest.get("notes", "") + f"\n[Rolled back to v{version} by {username} from backup {backup.name}]",
