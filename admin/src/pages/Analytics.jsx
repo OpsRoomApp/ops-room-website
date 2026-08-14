@@ -23,9 +23,24 @@ function fmtTime(seconds) {
   return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m ${r}s`;
 }
 
-function pct(rows, max) {
-  const top = max || (rows[0] ? Number(rows[0].value || 0) : 1);
-  return top > 0 ? Math.max(3, Math.round((Number(rows.value || 0) / top) * 100)) : 0;
+async function fetchJson(url) {
+  const resp = await fetch(url, { credentials: 'include' });
+  const text = await resp.text();
+  let body = {};
+  let parseError = '';
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      parseError = text.slice(0, 160);
+    }
+  }
+  if (!resp.ok || parseError) {
+    const detail = body.detail
+      || (parseError ? `Server error (HTTP ${resp.status}): ${parseError}` : `HTTP ${resp.status}`);
+    throw new Error(detail);
+  }
+  return body;
 }
 
 function MetricBar({ label, value, max }) {
@@ -57,7 +72,7 @@ export default function Analytics() {
     setLoading(true);
     setError('');
     try {
-      const st = await fetch(`${API}/status`, { credentials: 'include' }).then((r) => r.json());
+      const st = await fetchJson(`${API}/status`);
       setStatus(st);
       if (!st.ok) {
         setLoading(false);
@@ -65,12 +80,12 @@ export default function Analytics() {
       }
       const q = `period=${encodeURIComponent(next)}&limit=10`;
       const [ov, pages, referrers, browsers, devices, countries] = await Promise.all([
-        fetch(`${API}/overview?${q}`, { credentials: 'include' }).then((r) => r.json()),
-        fetch(`${API}/top-pages?${q}`, { credentials: 'include' }).then((r) => r.json()),
-        fetch(`${API}/referrers?${q}`, { credentials: 'include' }).then((r) => r.json()),
-        fetch(`${API}/browsers?${q}`, { credentials: 'include' }).then((r) => r.json()),
-        fetch(`${API}/devices?${q}`, { credentials: 'include' }).then((r) => r.json()),
-        fetch(`${API}/countries?${q}`, { credentials: 'include' }).then((r) => r.json()),
+        fetchJson(`${API}/overview?${q}`),
+        fetchJson(`${API}/top-pages?${q}`),
+        fetchJson(`${API}/referrers?${q}`),
+        fetchJson(`${API}/browsers?${q}`),
+        fetchJson(`${API}/devices?${q}`),
+        fetchJson(`${API}/countries?${q}`),
       ]);
       if (!ov.ok) throw new Error(ov.error || 'Umami data unavailable');
       setOverview(ov);

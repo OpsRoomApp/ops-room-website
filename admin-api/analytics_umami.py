@@ -1,12 +1,17 @@
 """OPS ROOM Admin API -- Umami website analytics bridge (v0.25.x).
 
-Proxies the self-hosted Umami analytics service (opsroom.live /umami.js +
+Proxies the self-hosted Umami analytics service (opsroom.live /script.js +
 /api/send) to the admin panel. Reads only: overview, top pages, referrers,
 browsers, devices, countries and active visitors for the configured website.
 
 Umami is cookieless and GDPR-friendly; no consent banner is required for the
 public site. The bridge authenticates to Umami's REST API with the dashboard
 account (UMAMI_USERNAME / UMAMI_PASSWORD) and caches the session token.
+
+Targets Umami v2.19.0 (pinned in docker-compose.yml): /metrics returns a bare
+array of {x, y} rows (not {"rows": [...]}) and /stats returns nested
+{"value": N, "prev": N} objects instead of plain numbers. Both shapes are
+handled here.
 
 Configuration (env):
     UMAMI_API_URL       base URL of the Umami instance, e.g. http://umami:3000
@@ -99,8 +104,11 @@ async def _resolve_website_id(client: httpx.AsyncClient, token: str) -> str | No
         return None
 
 
-async def _api_get(client: httpx.AsyncClient, path: str, params: dict[str, Any]) -> dict[str, Any] | None:
-    """GET an Umami API path with token auth; refresh the token once on 401."""
+async def _api_get(client: httpx.AsyncClient, path: str, params: dict[str, Any]) -> Any:
+    """GET an Umami API path with token auth; refresh the token once on 401.
+
+    Returns the parsed JSON (dict or list depending on the endpoint) or None.
+    """
     token = await _login(client)
     if not token:
         return None
@@ -133,7 +141,7 @@ def _period_window(period: str) -> tuple[int, int]:
 
 async def _site(
     client: httpx.AsyncClient, token: str, path: str, period: str, extra: dict[str, Any] | None = None
-) -> dict[str, Any] | None:
+) -> Any:
     site_id = await _resolve_website_id(client, token)
     if not site_id:
         return None
@@ -144,14 +152,25 @@ async def _site(
     data = await _api_get(client, f"/api/websites/{site_id}{path}", params)
     if data is None:
         return None
-    data["websiteId"] = site_id
+    if isinstance(data, dict):
+        data["websiteId"] = site_id
     return data
 
 
-def _metrics_rows(data: dict[str, Any] | None) -> list[dict[str, Any]]:
+def _metrics_rows(data: Any) -> list[dict[str, Any]]:
+    """Normalize Umami metrics rows to [{label, value}, ...].
+
+    v2.19.0 returns a bare array of {x, y}; other versions wrap them in
+    {"rows": [...]}. Both shapes are accepted.
+    """
     if not data:
         return []
-    rows = data.get("rows") or []
+    if isinstance(data, list):
+        rows = data
+    elif isinstance(data, dict):
+        rows = data.get("rows") or []
+    else:
+        return []
     out = []
     for r in rows:
         if isinstance(r, dict):
@@ -159,6 +178,24 @@ def _metrics_rows(data: dict[str, Any] | None) -> list[dict[str, Any]]:
         elif isinstance(r, (list, tuple)) and len(r) == 2:
             out.append({"label": r[0], "value": r[1]})
     return out
+
+
+def _val(stats: dict[str, Any], key: str, default: Any = 0) -> Any:
+    """Unwrap v2.19.0 nested stats values: {"value": N, "prev": N} -> N."""
+    v = stats.get(key, default)
+    if isinstance(v, dict):
+        return v.get("value", default)
+    return v
+
+
+def _active_count(active: Any) -> int:
+    if isinstance(active, (int, float)):
+        return int(active)
+    if isinstance(active, list):
+        return len(active)
+    if isinstance(active, dict):
+        return int(active.get("value", 0))
+    return 0
 
 
 async def _overview(client: httpx.AsyncClient, token: str, period: str) -> dict[str, Any] | None:
@@ -171,16 +208,21 @@ async def _overview(client: httpx.AsyncClient, token: str, period: str) -> dict[
     if stats is None:
         return None
     active = await _api_get(client, f"/api/websites/{site_id}/active", {})
+    visits = int(_val(stats, "visits") or 0)
+    bounces = int(_val(stats, "bounces") or 0)
+    totaltime = int(_val(stats, "totaltime") or 0)
     overview = {
         "websiteId": site_id,
-        "pageviews": stats.get("pageviews", 0),
-        "visitors": stats.get("visitors", 0),
-        "visits": stats.get("visits", 0),
-        "bounces": stats.get("bounces", 0),
-        "bounceRate": stats.get("bounceRate", 0),
-        "totalTime": stats.get("totaltime", 0),
-        "averageTime": stats.get("averageTime", 0),
-        "active": int(active or 0) if isinstance(active, (int, float)) else 0,
+        "pageviews": int(_val(stats, "pageviews") or 0),
+        "visitors": int(_val(stats, "visitors") or 0),
+        "visits": visits,
+        "bounces": bounces,
+        # v2.19.0 does not return bounceRate/averageTime; compute them here
+        # (totaltime is in seconds, matching the panel's fmtTime()).
+        "bounceRate": round(bounces / visits, 4) if visits else 0,
+        "totalTime": totaltime,
+        "averageTime": round(totaltime / visits) if visits else 0,
+        "active": _active_count(active),
     }
     return overview
 
