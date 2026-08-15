@@ -2,17 +2,25 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO.jsx';
 import { PAGE_TITLES } from '../config/seo.js';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function Download() {
   const [manifest, setManifest] = useState(null);
+  const [rawNotes, setRawNotes] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/update.json')
-      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
-      .then((data) => {
-        setManifest(data);
-        // Analytics are only recorded on actual download click, not page views.
+    Promise.all([
+      fetch('/api/update.json').then((r) => (r.ok ? r.json() : Promise.reject(r))),
+      fetch('/api/public/releases').then((r) => (r.ok ? r.json() : Promise.reject(r))),
+    ])
+      .then(([manifestData, releasesData]) => {
+        setManifest(manifestData);
+        const releases = releasesData?.releases || [];
+        const mv = manifestData?.latest_version || manifestData?.version || '';
+        const rel = releases.find((r) => r.version === mv) || releases[0];
+        if (rel?.notes) setRawNotes(rel.notes);
       })
       .catch(() => setError('Could not fetch release information. The update server may be unreachable.'));
   }, []);
@@ -127,11 +135,17 @@ export default function Download() {
                     <span>CHANNEL <strong>{channel}</strong></span>
                   </div>
 
-                  {notes && (
+                  {(rawNotes || notes) && (
                     <div className="panel" style={{ marginTop: '1rem' }}>
                       <div className="panel-head"><span className="panel-title">RELEASE NOTES</span></div>
                       <div className="panel-body">
-                        <p className="muted" style={{ whiteSpace: 'pre-wrap' }}>{notes}</p>
+                        {rawNotes ? (
+                          <div className="changelog-body">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{rawNotes}</ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="muted" style={{ whiteSpace: 'pre-wrap' }}>{notes}</p>
+                        )}
                       </div>
                     </div>
                   )}

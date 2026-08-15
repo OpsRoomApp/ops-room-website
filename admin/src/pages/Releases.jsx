@@ -19,7 +19,7 @@ const STATE_LABELS = {
 export default function Releases() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState('catalog');
+  const [tab, setTab] = useState('all');
   const [stateMsg, setStateMsg] = useState('');
 
   const load = () => {
@@ -150,7 +150,7 @@ export default function Releases() {
                   {r.state === 'draft' && (
                     <>
                       <button className="btn btn-sm" onClick={() => handleState(r.version, 'testing')}>Test</button>
-                      <button className="btn btn-sm btn-primary" onClick={handlePublish}>Publish</button>
+                      <button className="btn btn-sm btn-primary" onClick={() => handleState(r.version, 'published')}>Publish</button>
                     </>
                   )}
                   {r.state === 'testing' && (
