@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
+import useLatestVersion from '../hooks/useLatestVersion.js';
 
 const NAV_LINKS = [
   { to: '/', label: 'Home' },
@@ -30,6 +31,7 @@ function utc() {
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const version = useLatestVersion();
 
   // Close the drawer whenever the viewport enters desktop width so the
   // navigation isn't stuck open when a tablet rotates or the window is
@@ -58,7 +60,7 @@ export default function Header() {
         </span>
         <span className="ss-item ss-item--sep ss-item--hide-sm">/</span>
         <span className="ss-item">
-          BUILD <strong>v0.25.0</strong>
+          BUILD <strong>v{version}</strong>
         </span>
         <ZuluClock />
       </div>

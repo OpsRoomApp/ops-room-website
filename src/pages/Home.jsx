@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO.jsx';
+import useLatestVersion from '../hooks/useLatestVersion.js';
 import { PAGE_TITLES, SITE } from '../config/seo.js';
 import VatsimFIDS from '../components/VatsimFIDS.jsx';
 import CommunityMap from '../components/CommunityMap.jsx';
@@ -92,6 +93,7 @@ function HomeLeaderboard() {
 }
 
 export default function Home() {
+  const version = useLatestVersion();
   useEffect(() => {
     const cards = document.querySelectorAll('.tilt-card');
     const onMouseMove = (e) => {
@@ -126,7 +128,7 @@ export default function Home() {
         <div className="container hero-grid">
           <div>
             <div className="hero-meta">
-              <span className="tag"><span className="tag-dot" /> v0.25.0 PUBLIC</span>
+              <span className="tag"><span className="tag-dot" /> v{version} PUBLIC</span>
               <span className="tag">STABLE CHANNEL</span>
               <span className="tag">LOCAL · WINDOWS</span>
             </div>

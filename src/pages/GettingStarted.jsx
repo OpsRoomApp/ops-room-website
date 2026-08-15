@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO.jsx';
 import { PAGE_TITLES } from '../config/seo.js';
+import useLatestVersion from '../hooks/useLatestVersion.js';
 
 /*
  * Getting Started / Install & Setup.
@@ -26,13 +27,14 @@ const CONNECTIONS = [
 ];
 
 function HostConsole() {
+  const version = useLatestVersion();
   return (
     <div className="setup-host">
       <div className="setup-host-masthead">
         <div className="setup-host-title">
           <img src="/opsroom-mark.svg" alt="" width="26" height="26" />
           <strong>OPS ROOM</strong>
-          <strong className="setup-host-build">0.25.0</strong>
+          <strong className="setup-host-build">{version}</strong>
           <span>HOST AND INTEGRATION CONSOLE</span>
         </div>
         <div className="setup-host-clock">
@@ -47,7 +49,7 @@ function HostConsole() {
       <div className="setup-host-body">
         <div className="setup-host-banner">
           <div><span>LOCAL SERVICE</span><strong>RUNNING</strong></div>
-          <div><span>VERSION</span><strong>0.25.0</strong></div>
+          <div><span>VERSION</span><strong>{version}</strong></div>
           <div><span>ROLE</span><strong>HOST / BRIDGE</strong></div>
         </div>
         <div className="setup-host-grid">

@@ -1244,7 +1244,7 @@ h3 { font-size: 1rem; }
 }
 
 
-/* Community live network + leaderboard (v0.25.0) */
+/* Community live network + leaderboard */
 .community-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 1.5rem; align-items: start; }
 .community-live { background: var(--bg-panel); border: 1px solid var(--line-strong); display: flex; flex-direction: column; min-height: 300px; }
 .community-live-table { max-height: 360px; }

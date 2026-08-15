@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useVatsimStats } from '../hooks/useVatsimData.js';
+import useLatestVersion from '../hooks/useLatestVersion.js';
 
 function VatsimTicker() {
   const stats = useVatsimStats();
@@ -30,6 +31,7 @@ function VatsimTicker() {
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const version = useLatestVersion();
   return (
     <footer className="footer">
       <div className="container">
@@ -85,7 +87,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="footer-bottom">
-          <span className="footer-build">BUILD v0.25.0 · {year} · OPSROOM.LIVE</span>
+          <span className="footer-build">BUILD v{version} · {year} · OPSROOM.LIVE</span>
         </div>
       </div>
     </footer>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import useLatestVersion from '../hooks/useLatestVersion.js';
 
 /*
  * OPS ROOM interactive demo. Faithful reproduction of the desktop app:
@@ -115,6 +116,7 @@ function Masthead({ clock, date }) {
 }
 
 function Rail({ active, onNav }) {
+  const version = useLatestVersion();
   return (
     <aside className="demo-rail">
       <nav aria-label="Main modules">
@@ -123,7 +125,7 @@ function Rail({ active, onNav }) {
         ))}
       </nav>
       <div className="demo-rail-footer">
-        <span>OPS ROOM 0.25.0 PUBLIC RELEASE</span>
+        <span>OPS ROOM {version} PUBLIC RELEASE</span>
         <span>LAN CONSOLE</span>
         <span>SIMULATION USE ONLY</span>
       </div>
@@ -1162,6 +1164,7 @@ function ObsPage() {
 
 /* ---------------- SYSTEM / SETTINGS ---------------- */
 function SystemPage() {
+  const version = useLatestVersion();
   return (
     <section className="demo-page active">
       <PageHeading kicker="CONTROL POSITION 14" title="Settings">
@@ -1212,7 +1215,7 @@ function SystemPage() {
           <div className="demo-inline-actions"><button className="demo-ctl" type="button">Check for updates</button><button className="demo-ctl" type="button">Clear logs</button><button className="demo-ctl" type="button">Clear logs and cache</button></div>
         </Panel>
         <Panel title="Startup log" right="Refresh" className="demo-system-wide">
-          <pre className="demo-console-log">{`[10:03:12] OPS ROOM 0.25.0 starting\n[10:03:13] FSUIPC7 connected\n[10:03:13] SimConnect connected\n[10:03:14] vPilot bridge detected\n[10:03:15] SimBrief OFP loaded (BAW118)\n[10:03:16] Hoppie polling started\n[10:03:17] System normal`}</pre>
+          <pre className="demo-console-log">{`[10:03:12] OPS ROOM ${version} starting\n[10:03:13] FSUIPC7 connected\n[10:03:13] SimConnect connected\n[10:03:14] vPilot bridge detected\n[10:03:15] SimBrief OFP loaded (BAW118)\n[10:03:16] Hoppie polling started\n[10:03:17] System normal`}</pre>
         </Panel>
       </div>
     </section>
