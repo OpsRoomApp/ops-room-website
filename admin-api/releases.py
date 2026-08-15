@@ -605,7 +605,7 @@ async def set_release_state(
 
     # Validate state transitions
     valid_transitions = {
-        "draft": ("testing", "archived"),
+        "draft": ("testing", "published", "archived"),
         "testing": ("draft", "published", "archived"),
         "published": ("testing", "archived"),
         "archived": ("draft", "testing"),
