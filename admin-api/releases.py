@@ -381,6 +381,7 @@ async def list_releases(_session: dict = Depends(verify_session)):
 
 @router.post("/upload")
 async def upload_release(
+    request: Request,
     file: UploadFile = File(...),
     channel: str = Form("stable"),
     mandatory: bool = Form(False),
@@ -484,6 +485,7 @@ async def upload_release(
 
 @router.post("/upload-installer")
 async def upload_installer(
+    request: Request,
     file: UploadFile = File(...),
     _session: dict = Depends(verify_session),
 ):
