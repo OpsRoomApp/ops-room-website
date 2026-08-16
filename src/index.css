@@ -1251,6 +1251,11 @@ h3 { font-size: 1rem; }
 .community-empty { padding: 2rem; text-align: center; color: var(--fg-muted); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; }
 .community-panel { background: var(--bg-panel); border: 1px solid var(--line-strong); overflow: auto; }
 .leaderboard-tabs { display: flex; margin-bottom: 1.25rem; background: var(--bg-elevated); border: 1px solid var(--line-strong); }
+/* #119: sortable leaderboard column headers */
+.leaderboard-sort { background: none; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
+.leaderboard-sort:hover { color: var(--fg); }
+.leaderboard-sort.active { color: var(--fg); }
+.leaderboard-sort .sort-arrow { color: var(--nominal); font-size: 9px; }
 @media (max-width: 860px) { .community-grid { grid-template-columns: 1fr; } }
 
 

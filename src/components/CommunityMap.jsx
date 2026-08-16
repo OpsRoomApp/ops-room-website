@@ -62,12 +62,21 @@ function routePoints(f) {
   return pts.length >= 2 ? pts : null;
 }
 
+// #117: proper top-down aircraft glyph. The nose points straight up at 0°
+// (true North), so `rotate(${heading}deg)` renders the plane along its real
+// heading. The previous glyph (Material "send" paper plane) pointed NE at 45°
+// by default, which made every marker look ~45 degrees off its true heading.
 const PLANE_SVG =
-  '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>';
+  '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" stroke="currentColor" stroke-width="0.8" stroke-linejoin="round">' +
+  '<path d="M12 2 C12.5 5 12.9 6.9 13.6 8.6 L21.8 10.4 L22.7 12.8 L14.7 13.1 C14.8 14.1 14.8 15.1 14.7 16.1 L22.7 16.5 L21.8 18.9 L13.6 17.3 C12.9 19 12.5 20.9 12 23 C11.5 20.9 11.1 19 10.4 17.3 L2.2 18.9 L1.3 16.5 L9.3 16.1 C9.2 15.1 9.2 14.1 9.3 13.1 L1.3 12.8 L2.2 10.4 L10.4 8.6 C11.1 6.9 11.5 5 12 2 Z"/></svg>';
 
 function flightIcon(f, selected) {
   const heading = Number(f.heading);
-  const rotate = Number.isFinite(heading) ? `rotate(${heading}deg)` : '';
+  // #117: omit rotation when heading is unknown instead of rendering a
+  // misleading fixed orientation (fall back to the map track when present).
+  const track = Number(f.track_deg);
+  const deg = Number.isFinite(heading) ? heading : Number.isFinite(track) ? track : null;
+  const rotate = deg === null ? '' : `rotate(${deg}deg)`;
   // Selected aircraft gets a larger, amber icon so its identity is obvious
   // while its route line is shown (inline styles - no extra CSS required).
   const color = selected ? '#ffd166' : 'currentColor';

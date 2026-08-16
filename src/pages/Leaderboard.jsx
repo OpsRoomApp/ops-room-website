@@ -17,9 +17,46 @@ function fmtRate(value) {
   return `${Math.round(value)} fpm`;
 }
 
+// #119: sortable numeric columns. Default = HOURS descending (matches the
+// API's hours-first ordering). Landing rates: higher (closer to zero fpm) is
+// better, so descending shows the softest touchdowns first.
+const SORT_COLUMNS = [
+  { key: 'flights', label: 'FLIGHTS', value: (r) => r.flights },
+  { key: 'hours', label: 'HOURS', value: (r) => r.hours },
+  { key: 'avg', label: 'AVG LANDING', value: (r) => r.avg_landing_rate_fpm },
+  { key: 'best', label: 'BEST LANDING', value: (r) => r.best_landing_rate_fpm },
+];
+
+function sortRows(rows, key, dir) {
+  const col = SORT_COLUMNS.find((c) => c.key === key);
+  if (!col) return rows;
+  return [...rows].sort((a, b) => {
+    const va = col.value(a);
+    const vb = col.value(b);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1; // nulls always sort last
+    if (vb == null) return -1;
+    if (va === vb) return 0;
+    const cmp = va < vb ? -1 : 1;
+    return dir === 'asc' ? cmp : -cmp;
+  });
+}
+
 export default function Leaderboard() {
   const [period, setPeriod] = useState('alltime');
+  const [sortKey, setSortKey] = useState('hours');
+  const [sortDir, setSortDir] = useState('desc');
   const { leaderboard, loading, error } = useCommunityLeaderboard(period);
+  const rows = sortRows(leaderboard, sortKey, sortDir);
+
+  const toggleSort = (key) => {
+    if (key === sortKey) {
+      setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  };
 
   return (
     <>
@@ -70,14 +107,29 @@ export default function Leaderboard() {
                   <tr>
                     <th>RANK</th>
                     <th>PILOT</th>
-                    <th>FLIGHTS</th>
-                    <th>HOURS</th>
-                    <th>AVG LANDING</th>
-                    <th>BEST LANDING</th>
+                    {SORT_COLUMNS.map((col) => (
+                      <th key={col.key}>
+                        <button
+                          type="button"
+                          className={`leaderboard-sort ${sortKey === col.key ? 'active' : ''}`}
+                          onClick={() => toggleSort(col.key)}
+                          aria-sort={
+                            sortKey === col.key
+                              ? sortDir === 'asc' ? 'ascending' : 'descending'
+                              : 'none'
+                          }
+                        >
+                          {col.label}
+                          <span className="sort-arrow">
+                            {sortKey === col.key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}
+                          </span>
+                        </button>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.map((row, i) => (
+                  {rows.map((row, i) => (
                     <tr key={row.username || i}>
                       <td className="mono-bold">{MEDALS[i] || `#${i + 1}`}</td>
                       <td className="mono-bold">{row.username || 'pilot'}</td>

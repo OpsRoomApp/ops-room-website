@@ -161,6 +161,26 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _is_junk_position(latitude, longitude) -> bool:
+    """#117: reject test/junk positions before they reach the public map.
+
+    Valid live rows must be finite lat/lon inside the normal ranges, and must
+    not sit inside a ~0.1 degree box around (0,0) -- dev/test rows (e.g.
+    parked at lat 0.0004 / lon 0.0139) otherwise pollute the map with
+    headings stuck at 0/360 (everything pointing North).
+    """
+    try:
+        lat = float(latitude)
+        lon = float(longitude)
+    except (TypeError, ValueError):
+        return True
+    if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lon <= 180.0):
+        return True
+    if abs(lat) < 0.1 and abs(lon) < 0.1:
+        return True
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Auth helpers
 # ---------------------------------------------------------------------------
@@ -388,6 +408,10 @@ async def community_live(request: Request):
     if visibility != "public":
         raise HTTPException(status_code=403, detail="Live feed requires public visibility")
 
+    # #117: junk/test rows (near 0,0 or out of range) never reach the map.
+    if _is_junk_position(body.get("latitude"), body.get("longitude")):
+        return {"ok": True, "skipped": "invalid_position"}
+
     with _db() as conn:
         _ensure_tables(conn)
         conn.execute(
@@ -528,7 +552,8 @@ async def community_leaderboard(period: str = "alltime"):
             FROM flight_logs
             WHERE landing_rate IS NOT NULL AND visibility = 'public' {since}
             GROUP BY user_id
-            ORDER BY flights DESC, hours DESC
+            -- #119: rank by time flown first (flights as tiebreaker).
+            ORDER BY hours DESC, flights DESC
             LIMIT 50
             """
         ).fetchall()
