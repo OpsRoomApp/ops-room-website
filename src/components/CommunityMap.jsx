@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 // CSS import is a no-op during Vite SSR and gets bundled into the client
-// build, so it can stay static — only the Leaflet JS module is lazy.
+// build, so it can stay static. Only the Leaflet JS module is lazy.
 import 'leaflet/dist/leaflet.css';
 import { useCommunityLive } from '../hooks/useCommunity.js';
 
@@ -9,7 +9,7 @@ import { useCommunityLive } from '../hooks/useCommunity.js';
 // below happens inside effects (client-only), so by the time any effect runs
 // the promise has resolved.
 let _L = null;
-// `window` is undefined during Node SSR — never even start the Leaflet import
+// `window` is undefined during Node SSR, so never even start the Leaflet import
 // there (the module crashes at load without a DOM). Effects only run on the
 // client, and they no-op until the promise resolves.
 const leafletPromise =

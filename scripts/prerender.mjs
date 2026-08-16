@@ -1,5 +1,5 @@
 /**
- * Prerender — emit static HTML for the marketing routes so crawlers (Google,
+ * Prerender. Emit static HTML for the marketing routes so crawlers (Google,
  * Bing, Discord, social scrapers) see real content instead of an empty JS
  * shell.
  *
@@ -27,7 +27,7 @@ const dist = join(root, 'dist');
 const tmpOut = join(root, '.prerender-ssr');
 
 // Routes that produce static HTML. Dynamic routes (/transcripts/:id) and the
-// catch-all are deliberately excluded — they keep the SPA fallback.
+// catch-all are deliberately excluded, they keep the SPA fallback.
 const ROUTES = [
   '/',
   '/features',
@@ -66,7 +66,7 @@ function stripStaticHeadTags(head) {
 /**
  * Pull <title>, <meta ...> and <link ...> tags out of the rendered body HTML
  * (where React 19 puts them) so they can live in <head>. Returns
- * { headTags, body } — the body with those tags removed.
+ * { headTags, body }. The body with those tags removed.
  */
 function hoistHeadTags(body) {
   const tags = [];
