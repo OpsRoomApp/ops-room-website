@@ -80,9 +80,8 @@ function routePoints(f) {
 }
 
 // Aircraft marker glyph: the Material "send" paper plane, which reads as an
-// aircraft at icon size. The nose of this glyph points NE at 45° by default,
-// so the rotation below offsets by -45° to keep the plane on its true heading
-// (0° = North) for every marker.
+// aircraft at icon size. Its nose points straight up (0° = North), matching
+// the live heading rotation directly.
 const PLANE_SVG =
   '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>';
 
@@ -93,9 +92,7 @@ function flightIcon(f, selected) {
   // misleading fixed orientation (fall back to the map track when present).
   const track = Number(f.track_deg);
   const deg = Number.isFinite(heading) ? heading : Number.isFinite(track) ? track : null;
-  // The paper-plane glyph's nose points NE (45°) by default; subtract 45 so
-  // heading 0° (North) points the nose straight up.
-  const rotate = deg === null ? '' : `rotate(${deg - 45}deg)`;
+  const rotate = deg === null ? '' : `rotate(${deg}deg)`;
   // Selected aircraft gets a larger, amber icon so its identity is obvious
   // while its route line is shown (inline styles - no extra CSS required).
   const color = selected ? '#ffd166' : 'currentColor';
