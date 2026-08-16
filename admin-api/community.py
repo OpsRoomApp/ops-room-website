@@ -23,6 +23,8 @@ import json
 import logging
 import secrets
 import sqlite3
+import time
+from collections import deque
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -179,6 +181,61 @@ def _is_junk_position(latitude, longitude) -> bool:
     if abs(lat) < 0.1 and abs(lon) < 0.1:
         return True
     return False
+
+
+# ---------------------------------------------------------------------------
+# Flight-phase sanity for the public map
+# ---------------------------------------------------------------------------
+# The desktop app's flight-watch classifier can latch onto DESCENT at cruise:
+# it proposes DESCENT on a single vs < -300 sample, and the shared transition
+# table has no legal path back to CRUISE, so the pushed label can stay DESCENT
+# for the whole flight even while the aircraft is level at FL370. The logbook
+# phase shown in the app UI has stricter entry criteria and stays correct, but
+# the community feed sends the flight-watch label, so the map ends up wrong
+# (e.g. EWG7X at 37,014 ft showing DESCENT).
+#
+# Rather than trusting the pushed label, re-derive it here from the altitude
+# trend the server already receives on every live tick (the app posts roughly
+# every 15 s). Genuine descents keep their label; a descent-family label that
+# the trend refutes (sustained level flight at high altitude) is corrected to
+# CRUISE before it reaches the map.
+
+_ALT_HISTORY: dict[int, deque[tuple[float, float]]] = {}  # discord_id -> [(ts, alt_ft)]
+_MAX_ALT_SAMPLES = 32  # ~8 minutes at the 15 s live tick
+
+
+def _sanitized_phase(discord_id: int, pushed, altitude_ft) -> str:
+    """Correct a latched descent-family phase using the server-side altitude trend.
+
+    ``pushed`` is kept unchanged unless it is DESCENT/APPROACH at high altitude
+    while the altitude history proves the aircraft is level (window vertical
+    speed above -250 ft/min), which means the app's latch fired instead of a
+    real descent. Requires at least ~1 minute of history so a single noisy
+    sample cannot flip the label.
+    """
+    raw = str(pushed or "").strip()
+    phase = raw.upper()
+    if phase not in ("DESCENT", "APPROACH"):
+        return raw
+    try:
+        alt = float(altitude_ft)
+    except (TypeError, ValueError):
+        return raw
+    if alt <= 12000:  # below this the label is plausible; do not touch it
+        return raw
+    now = time.time()
+    hist = _ALT_HISTORY.setdefault(discord_id, deque(maxlen=_MAX_ALT_SAMPLES))
+    hist.append((now, alt))
+    if len(hist) < 4:
+        return raw
+    samples = list(hist)
+    dt = samples[-1][0] - samples[0][0]
+    if dt < 60.0:
+        return raw
+    vs_fpm = (samples[-1][1] - samples[0][1]) * 60.0 / dt
+    if vs_fpm > -250.0:
+        return "CRUISE"
+    return raw
 
 
 # ---------------------------------------------------------------------------
@@ -412,6 +469,11 @@ async def community_live(request: Request):
     if _is_junk_position(body.get("latitude"), body.get("longitude")):
         return {"ok": True, "skipped": "invalid_position"}
 
+    # Phase sanity: the app's flight-watch classifier can latch onto DESCENT
+    # at cruise; correct it from the altitude trend before storing (see
+    # _sanitized_phase).
+    phase = _sanitized_phase(discord_id, body.get("phase"), body.get("altitude_ft"))
+
     with _db() as conn:
         _ensure_tables(conn)
         conn.execute(
@@ -443,7 +505,7 @@ async def community_live(request: Request):
                 str(body.get("registration") or ""),
                 str(body.get("origin") or "").upper(),
                 str(body.get("destination") or "").upper(),
-                str(body.get("phase") or ""),
+                phase,
                 body.get("latitude"),
                 body.get("longitude"),
                 body.get("altitude_ft"),
