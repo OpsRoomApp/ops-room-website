@@ -1,23 +1,25 @@
 export const SITE = {
   name: 'OPS ROOM',
-  tagline: 'Professional Operations for Flight Simulation',
+  tagline: 'Free MSFS Cockpit Ops Suite',
   description:
-    'OPS ROOM is a local-first operations platform for Microsoft Flight Simulator. Dispatch, flight watch, Black Box recording, performance analysis, GSX, VATSIM, SimBrief, FSUIPC and SimConnect.',
+    'OPS ROOM is the free all-in-one cockpit ops suite for Microsoft Flight Simulator 2020 & 2024: dispatch, Flight Watch, Black Box replay, RAAS, performance and VATSIM FIDS — in the cockpit tablet, on the EFB, and on any screen.',
   url: 'https://opsroom.live',
-  image: 'https://opsroom.live/opsroom-mark-256.png',
+  // og:image must be a product screenshot (1200x630 crop ideal), not the logo
+  // mark — every shared opsroom.live link becomes a billboard.
+  image: 'https://opsroom.live/screenshots/ipad.png',
   twitter: '@opsroomlive',
 };
 
 export const PAGE_TITLES = {
-  home: `${SITE.name}: ${SITE.tagline}`,
-  features: `Modules: ${SITE.name}`,
-  technology: `Technology: ${SITE.name}`,
-  download: `Download: ${SITE.name}`,
-  gettingStarted: `Install & Setup: ${SITE.name}`,
-  documentation: `Documentation: ${SITE.name}`,
-  changelog: `Changelog: ${SITE.name}`,
-  contact: `Support: ${SITE.name}`,
-  faq: `FAQ: ${SITE.name}`,
-  privacy: `Privacy Policy: ${SITE.name}`,
-  leaderboard: `Community Leaderboard: ${SITE.name}`,
+  home: `OPS ROOM — Free MSFS Cockpit Ops Suite: Dispatch, Flight Watch, Black Box, EFB`,
+  features: `OPS ROOM Modules — Free Flight Recorder, Dispatch, RAAS for MSFS 2020 & 2024`,
+  technology: `OPS ROOM Technology — SimConnect, FSUIPC, GSX & Fenix Integration`,
+  download: `Download OPS ROOM — Free MSFS Ops Suite (Windows)`,
+  gettingStarted: `Install & Setup OPS ROOM — MSFS 2020 & 2024`,
+  documentation: `OPS ROOM Documentation — Modules, Settings & Integration`,
+  changelog: `OPS ROOM Changelog — Free MSFS Ops Suite Updates`,
+  contact: `Support — OPS ROOM Free MSFS Ops Suite`,
+  faq: `OPS ROOM FAQ — Free MSFS EFB, Flight Recorder & Dispatch`,
+  privacy: `Privacy Policy — OPS ROOM`,
+  leaderboard: `OPS ROOM Community Leaderboard — Flight Hours & Landings`,
 };
