@@ -16,29 +16,40 @@ import Transcript from './pages/Transcript.jsx';
 import Appeal from './pages/Appeal.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
 
+/**
+ * The route table, exported separately from the router wrapper so the SSR
+ * prerender entry (src/ssr-entry.jsx) can render the same routes with
+ * StaticRouter instead of BrowserRouter.
+ */
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Home />} />
+        <Route path="features" element={<Features />} />
+        <Route path="screenshots" element={<Screenshots />} />
+        <Route path="demo" element={<Demo />} />
+        <Route path="getting-started" element={<GettingStarted />} />
+        <Route path="documentation" element={<Documentation />} />
+        <Route path="download" element={<Download />} />
+        <Route path="changelog" element={<Changelog />} />
+        <Route path="/contact" element={<Support />} />
+        <Route path="support" element={<Support />} />
+        <Route path="faq" element={<FAQ />} />
+        <Route path="privacy" element={<Privacy />} />
+        <Route path="transcripts/:ticketId" element={<Transcript />} />
+        <Route path="appeal" element={<Appeal />} />
+        <Route path="leaderboard" element={<Leaderboard />} />
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="features" element={<Features />} />
-          <Route path="screenshots" element={<Screenshots />} />
-          <Route path="demo" element={<Demo />} />
-          <Route path="getting-started" element={<GettingStarted />} />
-          <Route path="documentation" element={<Documentation />} />
-          <Route path="download" element={<Download />} />
-          <Route path="changelog" element={<Changelog />} />
-          <Route path="/contact" element={<Support />} />
-          <Route path="support" element={<Support />} />
-          <Route path="faq" element={<FAQ />} />
-          <Route path="privacy" element={<Privacy />} />
-          <Route path="transcripts/:ticketId" element={<Transcript />} />
-          <Route path="appeal" element={<Appeal />} />
-          <Route path="leaderboard" element={<Leaderboard />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
-      </Routes>
+      <AppRoutes />
     </BrowserRouter>
   );
 }
