@@ -132,7 +132,7 @@ export default function Screenshots() {
               {SHOTS_LOOP.map((s, i) => (
                 <figure key={`${s.file}-${i}`} data-shot className="shot-row-item">
                   <a href={`/screenshots/${s.file}`} target="_blank" rel="noreferrer">
-                    <img src={`/screenshots/${s.file}`} alt={`OPS ROOM · ${s.label}`} loading="lazy" />
+                    <img src={`/screenshots/${s.file}`} alt={`OPS ROOM ${s.label} module for MSFS 2020 and 2024`} loading="lazy" />
                   </a>
                   <figcaption>
                     <span className="shot-row-label">{s.label}</span>

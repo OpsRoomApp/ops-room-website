@@ -189,7 +189,7 @@ export default function Home() {
               {[...STRIP_LOOP, ...STRIP_LOOP].map((s, i) => (
                 <figure key={`${s.file}-${i}`} className="strip-card">
                   <a href={`/screenshots/${s.file}`} target="_blank" rel="noreferrer" className="strip-link tilt-card">
-                    <img src={`/screenshots/${s.file}`} alt={`OPS ROOM · ${s.label}`} loading="lazy" />
+                    <img src={`/screenshots/${s.file}`} alt={`OPS ROOM ${s.label} module for MSFS 2020 and 2024`} loading="lazy" />
                     <figcaption>{s.label}</figcaption>
                   </a>
                 </figure>
@@ -221,7 +221,7 @@ export default function Home() {
           </ul>
 
           <p className="more-link">
-            <Link to="/features" className="btn btn-ghost">Read every module in detail</Link>
+            <Link to="/features" className="btn btn-ghost">Explore all 16 MSFS cockpit modules</Link>
           </p>
         </div>
       </section>

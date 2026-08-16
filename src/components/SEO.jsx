@@ -1,13 +1,15 @@
 import { Helmet } from 'react-helmet-async';
-import { SITE } from '../config/seo.js';
+import { SITE, PAGE_KEYWORDS } from '../config/seo.js';
 
-export default function SEO({ title, description, path = '' }) {
+export default function SEO({ title, description, path = '', keywords }) {
   const pageUrl = path ? `${SITE.url}${path}` : SITE.url;
+  const kw = keywords || PAGE_KEYWORDS[path.replace(/^\//, '')] || PAGE_KEYWORDS.home;
 
   return (
     <Helmet>
       <title>{title}</title>
       <meta name="description" content={description} />
+      <meta name="keywords" content={kw} />
       <link rel="canonical" href={pageUrl} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />

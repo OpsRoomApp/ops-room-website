@@ -15,6 +15,7 @@ import NotFound from './pages/NotFound.jsx';
 import Transcript from './pages/Transcript.jsx';
 import Appeal from './pages/Appeal.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
+import EfbApps from './pages/EfbApps.jsx';
 
 /**
  * The route table, exported separately from the router wrapper so the SSR
@@ -40,6 +41,7 @@ export function AppRoutes() {
         <Route path="transcripts/:ticketId" element={<Transcript />} />
         <Route path="appeal" element={<Appeal />} />
         <Route path="leaderboard" element={<Leaderboard />} />
+        <Route path="efb-apps" element={<EfbApps />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

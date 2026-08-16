@@ -48,6 +48,22 @@ const FAQS = [
     a: 'Join our Discord server or email support@opsroom.live. Include your OPS ROOM version, aircraft, simulator version, FSUIPC version, and a description of the issue. Log files from the app data folder are helpful for diagnostics.'
   },
   {
+    q: 'How do I get a flight recorder and landing replay in MSFS?',
+    a: 'MSFS has no built-in flight replay tool, so the common solution is a third-party flight recorder. OPS ROOM Black Box continuously records every flight as a local SQLite database and replays it in the Flight Analysis module with a scrubbable timeline, landing analysis, G-loading and CSV, GPX and KML export. It works with MSFS 2020 and MSFS 2024.'
+  },
+  {
+    q: 'Is there a free MSFS flight tracker?',
+    a: 'Yes. OPS ROOM is free during public beta and tracks every flight automatically through the Black Box recorder. Your flights appear on the community Live Map and leaderboard if you opt into public visibility, with flight hours, landing rate and best landing tracked across pilots.'
+  },
+  {
+    q: 'How do I get a dispatch OFP in Microsoft Flight Simulator?',
+    a: 'OPS ROOM Dispatch pulls your latest OFP from SimBrief, then scores routes against your aircraft type and ATC, cross-checks fuel and alternates, and gives you a signed loadsheet workflow before departure. The briefing module renders the full OFP with charts, weather, METAR and TAF in one signed view.'
+  },
+  {
+    q: 'What is the best MSFS 2024 EFB app?',
+    a: 'For a full cockpit ops suite, OPS ROOM runs as a native app inside the MSFS 2024 EFB and as a toolbar panel in both MSFS 2020 and 2024. It covers dispatch, FIDS, Black Box, RAAS, announcements and GSX automation. See the best MSFS 2024 EFB apps guide on this site for a comparison with Navigraph, Sky4Sim and the others.'
+  },
+  {
     q: 'Is OPS ROOM free?',
     a: 'OPS ROOM is currently available as a free public release. Future licensing is under consideration. All current features will remain available to existing users.'
   }
@@ -57,6 +73,21 @@ export default function FAQ() {
   return (
     <>
       <SEO title={PAGE_TITLES.faq} description="Frequently asked questions about OPS ROOM. Installation, aircraft support, integrations, Black Box, and troubleshooting." path="/faq" />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: FAQS.map((item) => ({
+              '@type': 'Question',
+              name: item.q,
+              acceptedAnswer: { '@type': 'Answer', text: item.a },
+            })),
+          }),
+        }}
+      />
 
       <section className="section">
         <div className="container">

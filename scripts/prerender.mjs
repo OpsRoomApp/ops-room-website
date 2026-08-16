@@ -43,6 +43,7 @@ const ROUTES = [
   '/privacy',
   '/appeal',
   '/leaderboard',
+  '/efb-apps',
 ];
 
 // Static head tags in index.html that the route's own SEO component re-emits

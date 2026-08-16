@@ -55,6 +55,7 @@ export default function Footer() {
               <li><Link to="/download">Downloads</Link></li>
               <li><Link to="/changelog">Changelog</Link></li>
               <li><Link to="/leaderboard">Leaderboard</Link></li>
+              <li><Link to="/efb-apps">EFB Apps Guide</Link></li>
               <li><a href="https://discord.gg/Dv6fNAjhAt" target="_blank" rel="noopener noreferrer">Discord</a></li>
             </ul>
           </div>

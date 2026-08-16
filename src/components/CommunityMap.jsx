@@ -83,9 +83,11 @@ function routePoints(f) {
 // (true North), so `rotate(${heading}deg)` renders the plane along its real
 // heading. The previous glyph (Material "send" paper plane) pointed NE at 45°
 // by default, which made every marker look ~45 degrees off its true heading.
+// Straight swept wings and a solid fuselage read as an aircraft at icon size;
+// the earlier rounded wing lobes looked like a butterfly.
 const PLANE_SVG =
-  '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" stroke="currentColor" stroke-width="0.8" stroke-linejoin="round">' +
-  '<path d="M12 2 C12.5 5 12.9 6.9 13.6 8.6 L21.8 10.4 L22.7 12.8 L14.7 13.1 C14.8 14.1 14.8 15.1 14.7 16.1 L22.7 16.5 L21.8 18.9 L13.6 17.3 C12.9 19 12.5 20.9 12 23 C11.5 20.9 11.1 19 10.4 17.3 L2.2 18.9 L1.3 16.5 L9.3 16.1 C9.2 15.1 9.2 14.1 9.3 13.1 L1.3 12.8 L2.2 10.4 L10.4 8.6 C11.1 6.9 11.5 5 12 2 Z"/></svg>';
+  '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round">' +
+  '<path d="M12 1.5 L14 8.5 L21.5 14 L15.5 15.2 L17.5 19.5 L12.8 20 L12 22.5 L11.2 20 L6.5 19.5 L8.5 15.2 L2.5 14 L10 8.5 Z"/></svg>';
 
 function flightIcon(f, selected) {
   if (!_L) return null;
