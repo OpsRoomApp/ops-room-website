@@ -1,7 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
+// CSS import is a no-op during Vite SSR and gets bundled into the client
+// build, so it can stay static — only the Leaflet JS module is lazy.
 import 'leaflet/dist/leaflet.css';
 import { useCommunityLive } from '../hooks/useCommunity.js';
+
+// Leaflet touches `window` at module load, which crashes Node SSR
+// (scripts/prerender.mjs). Load it lazily on the client only; every use of L
+// below happens inside effects (client-only), so by the time any effect runs
+// the promise has resolved.
+let _L = null;
+// `window` is undefined during Node SSR — never even start the Leaflet import
+// there (the module crashes at load without a DOM). Effects only run on the
+// client, and they no-op until the promise resolves.
+const leafletPromise =
+  typeof window !== 'undefined'
+    ? import('leaflet').then((m) => {
+        _L = m.default;
+        return _L;
+      })
+    : Promise.resolve(null);
 
 const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 const TILE_ATTRIBUTION =
@@ -71,6 +88,7 @@ const PLANE_SVG =
   '<path d="M12 2 C12.5 5 12.9 6.9 13.6 8.6 L21.8 10.4 L22.7 12.8 L14.7 13.1 C14.8 14.1 14.8 15.1 14.7 16.1 L22.7 16.5 L21.8 18.9 L13.6 17.3 C12.9 19 12.5 20.9 12 23 C11.5 20.9 11.1 19 10.4 17.3 L2.2 18.9 L1.3 16.5 L9.3 16.1 C9.2 15.1 9.2 14.1 9.3 13.1 L1.3 12.8 L2.2 10.4 L10.4 8.6 C11.1 6.9 11.5 5 12 2 Z"/></svg>';
 
 function flightIcon(f, selected) {
+  if (!_L) return null;
   const heading = Number(f.heading);
   // #117: omit rotation when heading is unknown instead of rendering a
   // misleading fixed orientation (fall back to the map track when present).
@@ -109,7 +127,11 @@ export default function CommunityMap() {
   // Initialise the Leaflet map once.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const map = L.map(containerRef.current, {
+    let disposed = false;
+    let map = null;
+    leafletPromise.then((L) => {
+      if (disposed || !containerRef.current || mapRef.current) return;
+      map = L.map(containerRef.current, {
       center: [45, 8],
       zoom: 3,
       minZoom: 2,
@@ -124,13 +146,17 @@ export default function CommunityMap() {
       maxZoom: 19,
     }).addTo(map);
     // Clicking empty map space deselects the flight and hides its route.
-    map.on('click', () => setSelectedId(null));
-    mapRef.current = map;
+      map.on('click', () => setSelectedId(null));
+      mapRef.current = map;
+    });
     return () => {
-      try {
-        map.remove();
-      } catch (_) {
-        /* noop */
+      disposed = true;
+      if (map) {
+        try {
+          map.remove();
+        } catch (_) {
+          /* noop */
+        }
       }
       mapRef.current = null;
       markersRef.current = {};

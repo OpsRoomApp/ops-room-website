@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO.jsx';
+import { PAGE_TITLES } from '../config/seo.js';
 
 const FAQS = [
   {
@@ -55,7 +56,7 @@ const FAQS = [
 export default function FAQ() {
   return (
     <>
-      <SEO title="FAQ: OPS ROOM" description="Frequently asked questions about OPS ROOM. Installation, aircraft support, integrations, Black Box, and troubleshooting." path="/faq" />
+      <SEO title={PAGE_TITLES.faq} description="Frequently asked questions about OPS ROOM. Installation, aircraft support, integrations, Black Box, and troubleshooting." path="/faq" />
 
       <section className="section">
         <div className="container">
