@@ -49,17 +49,22 @@ const ROUTES = [
 // (title, description, keywords, og:*, twitter:*, canonical). Strip them so
 // each prerendered page has exactly one set, sourced from the route itself.
 const STRIP_RE = [
-  /<title>[\s\S]*?<\/title>/,
-  /<meta name="description"[^>]*\/>/,
-  /<meta name="keywords"[^>]*\/>/,
-  /<meta property="og:[^>]*\/>/,
-  /<meta name="twitter:[^>]*\/>/,
-  /<link rel="canonical"[^>]*\/>/,
+  /<title>[\s\S]*?<\/title>/g,
+  /<meta name="description"[^>]*\/>/g,
+  /<meta name="keywords"[^>]*\/>/g,
+  /<meta property="og:[^>]*\/>/g,
+  /<meta name="twitter:[^>]*\/>/g,
+  /<link rel="canonical"[^>]*\/>/g,
 ];
 
 function stripStaticHeadTags(head) {
   let out = head;
   for (const re of STRIP_RE) out = out.replace(re, '');
+  if (process.env.PRERENDER_DEBUG) {
+    console.log('[debug] before strip og:image =', (head.match(/og:image/g) || []).length);
+    console.log('[debug] after strip og:image  =', (out.match(/og:image/g) || []).length);
+    console.log('[debug] head snippet =', JSON.stringify(head.slice(0, 900)));
+  }
   return out;
 }
 
