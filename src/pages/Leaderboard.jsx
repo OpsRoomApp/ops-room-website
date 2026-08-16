@@ -70,7 +70,7 @@ export default function Leaderboard() {
         <div className="container">
           <div className="section-head">
             <span className="section-eyebrow">/ COMMUNITY</span>
-            <h2 className="section-title">Flight leaderboard.</h2>
+            <h1 className="section-title">OPS ROOM community flight leaderboard</h1>
             <p className="section-subtitle">
               Ranked from flights logged by OPS ROOM pilots who opted into public
               visibility. Landing rate is the softest touchdown - the higher

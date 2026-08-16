@@ -235,9 +235,22 @@ export default function Features() {
     <>
       <SEO
         title={PAGE_TITLES.features}
-        description="OPS ROOM modules -- VATSIM FIDS, Dispatch, Briefing, Flight Watch, Black Box, Flight Analysis, Ground Control, Runway Awareness, CPDLC Datalink, Network, Live Map, Kneeboard, Procedures, Logbook, Announcer, OBS Tools."
+        description="Free cockpit ops suite for MSFS 2020 and 2024: VATSIM FIDS, Dispatch, Flight Watch, Black Box replay, RAAS, Ground Control and 16 modules in one app."
         path="/features"
       />
+
+      <section className="section">
+        <div className="container">
+          <div className="section-head">
+            <span className="section-eyebrow">/ ALL MODULES</span>
+            <h1 className="section-title">OPS ROOM modules: every cockpit tool in one MSFS app</h1>
+            <p className="section-subtitle">
+              Sixteen modules for dispatch, flight watch, recording and ground operations,
+              all running locally in a single OPS ROOM process on your MSFS PC.
+            </p>
+          </div>
+        </div>
+      </section>
 
       <section className="section">
         <div className="container">

@@ -2,7 +2,7 @@ export const SITE = {
   name: 'OPS ROOM',
   tagline: 'Free MSFS Cockpit Ops Suite',
   description:
-    'OPS ROOM is the free all-in-one cockpit ops suite for Microsoft Flight Simulator 2020 & 2024: dispatch, Flight Watch, Black Box replay, RAAS, performance and VATSIM FIDS, in the cockpit tablet, on the EFB, and on any screen.',
+    'Free cockpit ops suite for MSFS 2020 and 2024: dispatch, Flight Watch, Black Box replay, RAAS, performance and VATSIM FIDS in the cockpit tablet and on the EFB.',
   url: 'https://opsroom.live',
   // og:image must be a product screenshot (1200x630 crop ideal), not the logo
   // mark, every shared opsroom.live link becomes a billboard.

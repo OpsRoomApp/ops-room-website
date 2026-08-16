@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import useLatestVersion from '../hooks/useLatestVersion.js';
+import SEO from '../components/SEO.jsx';
 
 /*
  * OPS ROOM interactive demo. Faithful reproduction of the desktop app:
@@ -1300,6 +1301,12 @@ function AppFrame() {
 
 export default function Demo() {
   return (
+    <>
+      <SEO
+        title="OPS ROOM Live Demo: try the MSFS cockpit ops suite in your browser"
+        description="Try OPS ROOM free in your browser: an interactive demo of the MSFS cockpit ops suite with dispatch, Flight Watch, Black Box, RAAS and 20 modules."
+        path="/demo"
+      />
     <div className="demo-page-wrap">
       <section className="demo-intro">
         <span className="demo-intro-kicker">INTERACTIVE DEMO</span>
@@ -1309,5 +1316,6 @@ export default function Demo() {
       </section>
       <AppFrame />
     </div>
+    </>
   );
 }
