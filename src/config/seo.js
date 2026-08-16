@@ -6,7 +6,7 @@ export const SITE = {
   url: 'https://opsroom.live',
   // og:image must be a product screenshot (1200x630 crop ideal), not the logo
   // mark — every shared opsroom.live link becomes a billboard.
-  image: 'https://opsroom.live/screenshots/ipad.png',
+  image: 'https://opsroom.live/og-image.png',
   twitter: '@opsroomlive',
 };
 
