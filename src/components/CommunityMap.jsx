@@ -79,15 +79,12 @@ function routePoints(f) {
   return pts.length >= 2 ? pts : null;
 }
 
-// #117: proper top-down aircraft glyph. The nose points straight up at 0°
-// (true North), so `rotate(${heading}deg)` renders the plane along its real
-// heading. The previous glyph (Material "send" paper plane) pointed NE at 45°
-// by default, which made every marker look ~45 degrees off its true heading.
-// Straight swept wings and a solid fuselage read as an aircraft at icon size;
-// the earlier rounded wing lobes looked like a butterfly.
+// Aircraft marker glyph: the Material "send" paper plane, which reads as an
+// aircraft at icon size. The nose of this glyph points NE at 45° by default,
+// so the rotation below offsets by -45° to keep the plane on its true heading
+// (0° = North) for every marker.
 const PLANE_SVG =
-  '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round">' +
-  '<path d="M12 1.5 L14 8.5 L21.5 14 L15.5 15.2 L17.5 19.5 L12.8 20 L12 22.5 L11.2 20 L6.5 19.5 L8.5 15.2 L2.5 14 L10 8.5 Z"/></svg>';
+  '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>';
 
 function flightIcon(f, selected) {
   if (!_L) return null;
@@ -96,7 +93,9 @@ function flightIcon(f, selected) {
   // misleading fixed orientation (fall back to the map track when present).
   const track = Number(f.track_deg);
   const deg = Number.isFinite(heading) ? heading : Number.isFinite(track) ? track : null;
-  const rotate = deg === null ? '' : `rotate(${deg}deg)`;
+  // The paper-plane glyph's nose points NE (45°) by default; subtract 45 so
+  // heading 0° (North) points the nose straight up.
+  const rotate = deg === null ? '' : `rotate(${deg - 45}deg)`;
   // Selected aircraft gets a larger, amber icon so its identity is obvious
   // while its route line is shown (inline styles - no extra CSS required).
   const color = selected ? '#ffd166' : 'currentColor';
