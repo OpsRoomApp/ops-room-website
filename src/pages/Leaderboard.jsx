@@ -39,12 +39,20 @@ function sortRows(rows, key, dir) {
     if (va == null) return 1; // nulls always sort last
     if (vb == null) return -1;
     if (va === vb) return 0;
-    // Landing fpm: negate the absolute value so "larger" means softer
-    // (closest to 0 fpm) and the descending sort puts the softest on top.
-    // Positive rates (junk data) become strongly negative and sort last.
-    const sa = col.byAbs ? -Math.abs(va) : va;
-    const sb = col.byAbs ? -Math.abs(vb) : vb;
-    const cmp = sa < sb ? -1 : 1;
+    if (!col.byAbs) {
+      const cmp = va < vb ? -1 : 1;
+      return dir === 'asc' ? cmp : -cmp;
+    }
+    // Landing fpm columns: a real touchdown is negative, so positive or
+    // zero rates are junk data and always sink to the bottom in both sort
+    // directions. Among real landings, descending shows the softest first
+    // (closest to 0 fpm) and ascending shows the hardest first.
+    const junkA = va >= 0;
+    const junkB = vb >= 0;
+    if (junkA !== junkB) return junkA ? 1 : -1;
+    const ka = -Math.abs(va);
+    const kb = -Math.abs(vb);
+    const cmp = ka < kb ? -1 : 1;
     return dir === 'asc' ? cmp : -cmp;
   });
 }
