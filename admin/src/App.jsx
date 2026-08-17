@@ -17,6 +17,8 @@ import DiscordAudit from './pages/DiscordAudit.jsx';
 import BugReports from './pages/BugReports.jsx';
 import SupportRequests from './pages/SupportRequests.jsx';
 import Analytics from './pages/Analytics.jsx';
+import Roadmap from './pages/Roadmap.jsx';
+import Feedback from './pages/Feedback.jsx';
 
 export default function App() {
   return (
@@ -40,6 +42,8 @@ export default function App() {
             <Route path="bug-reports" element={<BugReports />} />
             <Route path="support-requests" element={<SupportRequests />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="roadmap" element={<Roadmap />} />
+            <Route path="feedback" element={<Feedback />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

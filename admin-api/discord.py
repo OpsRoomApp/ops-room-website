@@ -120,6 +120,28 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def enqueue_pending_action(action_type: str, payload: dict, scheduled_at: str | None = None) -> int:
+    """Queue an action for the OPS CONTROL bot to dispatch to Discord.
+
+    Shared by the announcement, roadmap and feedback flows: validates the
+    shared pending_actions schema, inserts a canonical row and returns the
+    new queue id. Raises HTTPException(503) when the bot DB is unreachable or
+    the schema is outdated (the bot rebuilds the table on next start).
+    """
+    with _db_session() as conn:
+        _validate_pending_schema(conn)
+        conn.execute(
+            """
+            INSERT INTO pending_actions
+                (action_type, payload_json, status, created_at, scheduled_at)
+            VALUES (?, ?, 'pending', ?, ?)
+            """,
+            (action_type, json.dumps(payload), _now_iso(), scheduled_at),
+        )
+        row = conn.execute("SELECT last_insert_rowid()").fetchone()
+        return int(row[0])
+
+
 # ===================================================================
 # GET /api/discord/status  (expanded)
 # ===================================================================

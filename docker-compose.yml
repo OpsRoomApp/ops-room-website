@@ -87,6 +87,11 @@ services:
       # Website support form (v0.25.x): public /support contact form messages.
       - SUPPORT_DB=/opt/opsroom-support/support.sqlite3
       - SUPPORT_RATE_LIMIT_PER_MIN=${SUPPORT_RATE_LIMIT_PER_MIN:-5}
+      # Roadmap (v0.26): admin-managed public roadmap + Discord publish queue.
+      - ROADMAP_DB=/opt/opsroom-roadmap/roadmap.sqlite3
+      # Feedback / feature requests (v0.26): public ingest + admin review.
+      - FEEDBACK_DB=/opt/opsroom-feedback/feedback.sqlite3
+      - FEEDBACK_RATE_LIMIT_PER_MIN=${FEEDBACK_RATE_LIMIT_PER_MIN:-10}
       # flightsim.to social-proof badge (v0.25.x). Optional; without a key the
       # homepage badge shows a plain link instead of live stats.
       - FLIGHTSIM_API_KEY=${FLIGHTSIM_API_KEY:-}
@@ -120,6 +125,9 @@ services:
       - /opt/opsroom-bug-reports:/opt/opsroom-bug-reports
       # Website support form storage (v0.25.x).
       - /opt/opsroom-support:/opt/opsroom-support
+      # Roadmap + feedback storage (v0.26).
+      - /opt/opsroom-roadmap:/opt/opsroom-roadmap
+      - /opt/opsroom-feedback:/opt/opsroom-feedback
     networks:
       - opsroom-net
     healthcheck:

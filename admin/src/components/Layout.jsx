@@ -44,6 +44,8 @@ export default function Layout() {
           <NavLink to="/support">Support</NavLink>
           <NavLink to="/bug-reports">Bug Reports</NavLink>
           <NavLink to="/support-requests">Support Requests</NavLink>
+          <NavLink to="/feedback">Feedback</NavLink>
+          <NavLink to="/roadmap">Roadmap</NavLink>
           <NavLink to="/analytics">Analytics</NavLink>
         </nav>
         <div className="admin-user">

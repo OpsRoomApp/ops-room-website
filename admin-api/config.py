@@ -74,6 +74,19 @@ BUG_REPORTS_RATE_LIMIT_PER_MIN = int(os.getenv("BUG_REPORTS_RATE_LIMIT_PER_MIN",
 SUPPORT_DB = Path(os.getenv("SUPPORT_DB", "/opt/opsroom-support/support.sqlite3"))
 SUPPORT_RATE_LIMIT_PER_MIN = int(os.getenv("SUPPORT_RATE_LIMIT_PER_MIN", "5"))
 
+# ---- Roadmap (v0.26) ----
+# Admin-managed public roadmap served to the Discord bot (/roadmap command +
+# roadmap channel announcements). The roadmap is public by design; publishing
+# to Discord just enqueues a pending_action the OPS CONTROL bot dispatches.
+ROADMAP_DB = Path(os.getenv("ROADMAP_DB", "/opt/opsroom-roadmap/roadmap.sqlite3"))
+
+# ---- Feedback / feature requests (v0.26) ----
+# Public ingest (app report modal, website form) -> admin review + Discord
+# forum thread via pending_actions. No secret; per-IP rate limiting is the
+# primary spam defense.
+FEEDBACK_DB = Path(os.getenv("FEEDBACK_DB", "/opt/opsroom-feedback/feedback.sqlite3"))
+FEEDBACK_RATE_LIMIT_PER_MIN = int(os.getenv("FEEDBACK_RATE_LIMIT_PER_MIN", "10"))
+
 # ---- flightsim.to social-proof badge (v0.25.x) ----
 # Optional: when FLIGHTSIM_API_KEY + FLIGHTSIM_ADDON_ID are set, the website
 # homepage badge shows the live rating/download count (server-cached 6h).

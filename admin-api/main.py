@@ -31,6 +31,8 @@ import support       # v0.25.x: website /support contact form ingest + admin rev
 import flightsim     # v0.25.x: flightsim.to social-proof badge stats
 import analytics_umami  # v0.25.x: Umami website analytics bridge (admin panel)
 import public_releases  # v0.25.x: public release history (website changelog + Discord bot)
+import roadmap         # v0.26: admin-managed roadmap (public endpoint + Discord publish)
+import feedback        # v0.26: public feedback/feature-request ingest + admin review
 
 app = FastAPI(title="OPS ROOM Admin API")
 
@@ -76,6 +78,14 @@ async def _startup() -> None:
         support.init_db()
     except Exception:
         pass
+    try:
+        roadmap.init_db()
+    except Exception:
+        pass
+    try:
+        feedback.init_db()
+    except Exception:
+        pass
 
 # CORS: allow admin frontend, main website, and desktop app (localhost).
 app.add_middleware(
@@ -114,6 +124,9 @@ app.include_router(support.router)
 app.include_router(flightsim.router)
 app.include_router(analytics_umami.router)
 app.include_router(public_releases.router)
+app.include_router(roadmap.router)
+app.include_router(roadmap.public_router)
+app.include_router(feedback.router)
 
 
 @app.get("/api/ping")
