@@ -44,6 +44,7 @@ const ROUTES = [
   '/appeal',
   '/leaderboard',
   '/efb-apps',
+  '/press',
 ];
 
 // Static head tags in index.html that the route's own SEO component re-emits

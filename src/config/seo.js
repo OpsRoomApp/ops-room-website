@@ -26,6 +26,7 @@ export const PAGE_KEYWORDS = {
   faq: 'MSFS flight recorder question, MSFS EFB app FAQ, free MSFS flight tracker, MSFS dispatch OFP, OPS ROOM troubleshooting',
   privacy: 'OPS ROOM privacy policy, MSFS flight recorder data, OPS ROOM data storage',
   leaderboard: 'MSFS flight hours leaderboard, MSFS landing rate rankings, OPS ROOM community, flight sim leaderboard',
+  press: 'OPS ROOM press release, OPS ROOM news, MSFS operations suite announcement, MSFS 2024 EFB press, OPS ROOM media kit',
   screenshots: 'OPS ROOM screenshots, MSFS flight recorder interface, MSFS EFB app screenshots, Black Box replay screenshots',
   demo: 'OPS ROOM demo, MSFS flight recorder online demo, try MSFS EFB app, flight operations suite demo',
   efbApps: 'best MSFS 2024 EFB apps, MSFS EFB apps, MSFS 2024 tablet apps, Navigraph MSFS, Sky4Sim MSFS, free MSFS EFB',
@@ -45,4 +46,5 @@ export const PAGE_TITLES = {
   privacy: `Privacy Policy: OPS ROOM`,
   leaderboard: `OPS ROOM Community Leaderboard: Flight Hours & Landings`,
   efbApps: `Best MSFS 2024 EFB Apps (Free & Paid) | OPS ROOM`,
+  press: `Press Release: OPS ROOM Brings an Airline Operations Center to MSFS, Free`,
 };

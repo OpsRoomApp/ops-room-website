@@ -16,6 +16,7 @@ import Transcript from './pages/Transcript.jsx';
 import Appeal from './pages/Appeal.jsx';
 import Leaderboard from './pages/Leaderboard.jsx';
 import EfbApps from './pages/EfbApps.jsx';
+import PressRelease from './pages/PressRelease.jsx';
 
 /**
  * The route table, exported separately from the router wrapper so the SSR
@@ -42,6 +43,7 @@ export function AppRoutes() {
         <Route path="appeal" element={<Appeal />} />
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="efb-apps" element={<EfbApps />} />
+        <Route path="press" element={<PressRelease />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
