@@ -608,9 +608,14 @@ async def community_leaderboard(period: str = "alltime"):
             SELECT username,
                    COUNT(*)                       AS flights,
                    COALESCE(SUM(duration_min), 0) / 60.0 AS hours,
-                   AVG(landing_rate)              AS avg_rate,
-                   MAX(landing_rate)              AS best_rate,
-                   MIN(landing_rate)              AS worst_rate
+                   -- #119: a real touchdown is strictly negative and at least
+                   -- 1 fpm of descent. Zero/positive values and near-zero
+                   -- parked v/s readings (e.g. -0.008 fpm) are telemetry junk
+                   -- that would otherwise rank as the "best" landing and
+                   -- display as 0 fpm.
+                   AVG(CASE WHEN landing_rate <= -1 THEN landing_rate END) AS avg_rate,
+                   MAX(CASE WHEN landing_rate <= -1 THEN landing_rate END) AS best_rate,
+                   MIN(CASE WHEN landing_rate <= -1 THEN landing_rate END) AS worst_rate
             FROM flight_logs
             WHERE landing_rate IS NOT NULL AND visibility = 'public' {since}
             GROUP BY user_id
