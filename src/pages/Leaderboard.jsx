@@ -18,13 +18,15 @@ function fmtRate(value) {
 }
 
 // #119: sortable numeric columns. Default = HOURS descending (matches the
-// API's hours-first ordering). Landing rates: higher (closer to zero fpm) is
-// better, so descending shows the softest touchdowns first.
+// API's hours-first ordering). Landing rates are always negative fpm and a
+// soft touchdown is close to 0 (e.g. -220 fpm), so the landing columns sort
+// by absolute value: the default descending click shows the softest
+// touchdown first and any junk positive rates sink to the bottom.
 const SORT_COLUMNS = [
   { key: 'flights', label: 'FLIGHTS', value: (r) => r.flights },
   { key: 'hours', label: 'HOURS', value: (r) => r.hours },
-  { key: 'avg', label: 'AVG LANDING', value: (r) => r.avg_landing_rate_fpm },
-  { key: 'best', label: 'BEST LANDING', value: (r) => r.best_landing_rate_fpm },
+  { key: 'avg', label: 'AVG LANDING', value: (r) => r.avg_landing_rate_fpm, byAbs: true },
+  { key: 'best', label: 'BEST LANDING', value: (r) => r.best_landing_rate_fpm, byAbs: true },
 ];
 
 function sortRows(rows, key, dir) {
@@ -37,7 +39,12 @@ function sortRows(rows, key, dir) {
     if (va == null) return 1; // nulls always sort last
     if (vb == null) return -1;
     if (va === vb) return 0;
-    const cmp = va < vb ? -1 : 1;
+    // Landing fpm: negate the absolute value so "larger" means softer
+    // (closest to 0 fpm) and the descending sort puts the softest on top.
+    // Positive rates (junk data) become strongly negative and sort last.
+    const sa = col.byAbs ? -Math.abs(va) : va;
+    const sb = col.byAbs ? -Math.abs(vb) : vb;
+    const cmp = sa < sb ? -1 : 1;
     return dir === 'asc' ? cmp : -cmp;
   });
 }
