@@ -13,11 +13,12 @@ import logging
 import re
 import sqlite3
 import time
+from contextlib import contextmanager
 from typing import Iterator
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from .community import _db as _community_db  # reuse the shared SQLite connection/commit
+from community import _db as _community_db  # reuse the shared SQLite connection/commit
 
 _LOGGER = logging.getLogger("opsroom.landing_cards")
 router = APIRouter(prefix="/api/landing-cards", tags=["landing-cards"])
@@ -39,12 +40,12 @@ def _ensure_tables(conn: sqlite3.Connection) -> None:
     )
 
 
+@contextmanager
 def _db() -> Iterator[sqlite3.Connection]:
     # Reuse the shared community connection factory (same SQLite store).
-    for conn in _community_db():
+    with _community_db() as conn:
         _ensure_tables(conn)
         yield conn
-        break
 
 
 @router.post("")
