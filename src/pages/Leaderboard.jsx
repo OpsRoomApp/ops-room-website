@@ -147,7 +147,15 @@ export default function Leaderboard() {
                   {rows.map((row, i) => (
                     <tr key={row.username || i}>
                       <td className="mono-bold">{MEDALS[i] || `#${i + 1}`}</td>
-                      <td className="mono-bold">{row.username || 'pilot'}</td>
+                      <td className="mono-bold">
+                        {row.username ? (
+                          <Link to={`/profile/${encodeURIComponent(row.username)}`} style={{ color: 'inherit', textDecoration: 'underline dotted' }}>
+                            {row.username}
+                          </Link>
+                        ) : (
+                          'pilot'
+                        )}
+                      </td>
                       <td>{row.flights}</td>
                       <td>{row.hours.toFixed(1)}</td>
                       <td>{fmtRate(row.avg_landing_rate_fpm)}</td>

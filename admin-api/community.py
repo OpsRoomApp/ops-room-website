@@ -592,6 +592,63 @@ async def community_live_feed():
     }
 
 
+@router.get("/profile")
+async def community_profile(user: str = "", username: str = ""):
+    """Public pilot profile (#1): the pilot's public flights + lifetime stats.
+
+    Mirrors the app-side logbook for the linked Discord identity, using the
+    same `flight_logs` table that feeds the leaderboard. Only public-visibility
+    flights are ever returned.
+    """
+    name = (user or username or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="A username is required")
+    with _db() as conn:
+        rows = conn.execute(
+            """
+            SELECT callsign, aircraft, registration, departure, arrival, route,
+                   duration_min, landing_rate, score, touchdown_g, submitted_at
+            FROM flight_logs
+            WHERE visibility = 'public' AND lower(username) = lower(?)
+            ORDER BY submitted_at DESC
+            LIMIT 500
+            """,
+            (name,),
+        ).fetchall()
+    flights = [
+        {
+            "callsign": r["callsign"],
+            "aircraft": r["aircraft"],
+            "registration": r["registration"],
+            "departure": r["departure"],
+            "arrival": r["arrival"],
+            "route": r["route"],
+            "duration_min": r["duration_min"],
+            "landing_rate_fpm": r["landing_rate"],
+            "score": r["score"],
+            "touchdown_g": r["touchdown_g"],
+            "submitted_at": r["submitted_at"],
+        }
+        for r in rows
+    ]
+    # Match the leaderboard convention: only |rate| >= 1 fpm counts as a real
+    # touchdown, and the average is signed (landings are negative fpm; the
+    # best is the least-negative value).
+    signed = [float(r["landing_rate"]) for r in rows if r["landing_rate"] is not None and abs(float(r["landing_rate"])) >= 1]
+    best = None
+    for rate in signed:
+        if best is None or rate > best:
+            best = rate
+    stats = {
+        "flights": len(flights),
+        "hours": round(sum(float(r["duration_min"] or 0.0) for r in rows) / 60.0, 1),
+        "average_landing_rate_fpm": round(sum(signed) / len(signed), 1) if signed else None,
+        "best_landing_rate_fpm": round(best, 1) if best is not None else None,
+        "aircraft": sorted({str(r["aircraft"] or "") for r in rows if r["aircraft"]}),
+    }
+    return {"ok": True, "username": name, "stats": stats, "flights": flights}
+
+
 @router.get("/leaderboard")
 async def community_leaderboard(period: str = "alltime"):
     """Public leaderboard from flight_logs (public-visibility flights)."""

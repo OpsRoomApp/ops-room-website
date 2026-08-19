@@ -122,6 +122,8 @@ app.include_router(community.router)
 app.include_router(bug_reports.router)
 app.include_router(support.router)
 app.include_router(flightsim.router)
+from . import landing_cards as _landing_cards
+app.include_router(_landing_cards.router)
 app.include_router(analytics_umami.router)
 app.include_router(public_releases.router)
 app.include_router(roadmap.router)
